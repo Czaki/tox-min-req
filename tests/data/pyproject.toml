@@ -1,0 +1,16 @@
+[project]
+name = "sample_package_name"
+dependencies = [
+    "pandas>=0.25.0 ; sys_platform == 'win32'",
+    "numpy>=1.16.0 ; python_version < '3.8'",
+    "numpy>=1.18.0 ; python_version >= '3.8'",
+    "scipy>=1.2.0,!=1.2.1",
+    "matplotlib",
+    ]
+
+[project.optional-dependencies]
+tests = [
+    "pytest>=7.0.0",
+    "pytest-cov>=2.5",
+    ]
+docs = ["sphinx>=3.0.0"]
