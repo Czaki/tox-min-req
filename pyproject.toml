@@ -44,6 +44,17 @@ Documentation = "https://github.com/czaki/tox-min-req#readme"
 Issues = "https://github.com/czaki/tox-min-req/issues"
 Source = "https://github.com/czaki/tox-min-req"
 
+[project.optional-dependencies]
+test = [
+  "pytest",
+  "pytest-cov",
+  "tox[testing]",
+]
+
+[project.entry-points.tox]
+min-req = "tox_min_req._tox_plugin"
+
+
 [tool.setuptools_scm]
 write_to = "tox_min_req/_version.py"
 
