@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     import pytest
 
 
-def test_setup_cfg_parse(data_dir: Path, monkeypatch: "pytest.MonkeyPatch"):
+def test_setup_cfg_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
     monkeypatch.setattr("sys.platform", "linux")
     setup_file = data_dir / "setup.cfg"
 
@@ -19,26 +19,20 @@ def test_setup_cfg_parse(data_dir: Path, monkeypatch: "pytest.MonkeyPatch"):
         "scipy": "1.2.0",
     }
 
-    assert parse_setup_cfg(setup_file, python_version="3.7") == {"numpy": "1.16.0"} | constrains
-    assert (
-        parse_setup_cfg(setup_file, python_version="3.8")
-        == {
-            "numpy": "1.18.0",
-        }
-        | constrains
-    )
+    assert parse_setup_cfg(setup_file, python_version="3.7") == {"numpy": "1.16.0", **constrains}
+    assert parse_setup_cfg(setup_file, python_version="3.8") == {
+        "numpy": "1.18.0",
+        **constrains,
+    }
     monkeypatch.setattr("sys.platform", "win32")
-    assert (
-        parse_setup_cfg(setup_file, python_version="3.8")
-        == {
-            "numpy": "1.18.0",
-            "pandas": "0.25.0",
-        }
-        | constrains
-    )
+    assert parse_setup_cfg(setup_file, python_version="3.8") == {
+        "numpy": "1.18.0",
+        "pandas": "0.25.0",
+        **constrains,
+    }
 
 
-def test_pyproject_toml_parse(data_dir: Path, monkeypatch: "pytest.MonkeyPatch"):
+def test_pyproject_toml_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
     monkeypatch.setattr("sys.platform", "linux")
     pyproject_file = data_dir / "pyproject.toml"
 
@@ -49,20 +43,14 @@ def test_pyproject_toml_parse(data_dir: Path, monkeypatch: "pytest.MonkeyPatch")
         "scipy": "1.2.0",
     }
 
-    assert parse_pyproject_toml(pyproject_file, python_version="3.7") == {"numpy": "1.16.0"} | constrains
-    assert (
-        parse_pyproject_toml(pyproject_file, python_version="3.8")
-        == {
-            "numpy": "1.18.0",
-        }
-        | constrains
-    )
+    assert parse_pyproject_toml(pyproject_file, python_version="3.7") == {"numpy": "1.16.0", **constrains}
+    assert parse_pyproject_toml(pyproject_file, python_version="3.8") == {
+        "numpy": "1.18.0",
+        **constrains,
+    }
     monkeypatch.setattr("sys.platform", "win32")
-    assert (
-        parse_pyproject_toml(pyproject_file, python_version="3.8")
-        == {
-            "numpy": "1.18.0",
-            "pandas": "0.25.0",
-        }
-        | constrains
-    )
+    assert parse_pyproject_toml(pyproject_file, python_version="3.8") == {
+        "numpy": "1.18.0",
+        "pandas": "0.25.0",
+        **constrains,
+    }

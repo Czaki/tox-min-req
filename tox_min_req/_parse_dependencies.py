@@ -11,7 +11,7 @@ from packaging.requirements import Requirement
 if sys.version_info < (3, 11):
     from tomli import loads as toml_loads
 else:
-    from tomlib import load as toml_loads
+    from tomllib import loads as toml_loads
 
 version_constrains = re.compile(r"([a-zA-Z0-9_\-]+)([><=!]+)([0-9\.]+)")
 
@@ -20,7 +20,8 @@ def _parse_single_requirement(line: str, python_version: str) -> Dict[str, str]:
     req = Requirement(line)
     if req.marker is not None and not req.marker.evaluate({"python_version": python_version}):
         return {}
-    if version_li := [str(x).replace(">=", "") for x in req.specifier if ">=" in str(x)]:
+    version_li = [str(x).replace(">=", "") for x in req.specifier if ">=" in str(x)]
+    if version_li:
         return {req.name: version_li[0]}
     return {}
 
@@ -31,7 +32,7 @@ def _parse_setup_cfg_section(section: str, python_version: str) -> Dict[str, str
         line = line.strip()
         if line.startswith("#") or not line or ">=" not in line:
             continue
-        res |= _parse_single_requirement(line, python_version)
+        res.update(_parse_single_requirement(line, python_version))
     return res
 
 
@@ -52,8 +53,8 @@ def parse_pyproject_toml(path: Union[str, Path], python_version: str) -> Dict[st
         data = toml_loads(f.read())
     base_constrains: Dict[str, str] = {}
     for line in data["project"]["dependencies"]:
-        base_constrains |= _parse_single_requirement(line, python_version)
+        base_constrains.update(_parse_single_requirement(line, python_version))
     for extra in data["project"]["optional-dependencies"]:
         for line in data["project"]["optional-dependencies"][extra]:
-            base_constrains |= _parse_single_requirement(line, python_version)
+            base_constrains.update(_parse_single_requirement(line, python_version))
     return base_constrains
