@@ -87,8 +87,13 @@ def test_sample_package():
 """
 
 
+@pytest.fixture(autouse=True)
+def _clean_pip_constrains_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("PIP_CONSTRAINT", raising=False)
+
+
 @pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
-def test_tox_project_creator_setup_sfg(
+def test_setup_cfg_parse(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
     data_dir: "Path",
@@ -113,7 +118,7 @@ def test_tox_project_creator_setup_sfg(
 
 
 @pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
-def test_tox_project_creator_pyproject(
+def test_pyproject_toml_parse(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
     data_dir: "Path",
@@ -137,7 +142,7 @@ def test_tox_project_creator_pyproject(
 
 
 @pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
-def test_tox_project_creator_pyproject_min_req_config(
+def test_min_req_config(
     tox_project: ToxProjectCreator,
     data_dir: "Path",
     cmp: str,
@@ -187,6 +192,72 @@ def test_preserve_constrains(
     result = project.run("run")
 
     result.assert_success()
+
+
+def test_additional_constrains(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    tmp_path: "Path",
+) -> None:
+    monkeypatch.setenv("MIN_REQ", "1")
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+
+    (tmp_path / "constraints_dummy.txt").write_text("wheel==0.37.0")
+
+    test_file_template_ = test_file_template.format(cmp="==")
+    test_file_template_ += 'import coverage\ndef test_click_version():\n    assert coverage.__version__ == "6.5.0"\n'
+    test_file_template_ = test_file_template_.replace("1.13.0", "1.14.0")
+
+    req_str = "\n".join(
+        f"    {val}"
+        for val in ["coverage==6.5.0", "babel==2.6.0", "six==1.14.0", f"-r {tmp_path / 'constraints_dummy.txt'}"]
+    )
+
+    project = tox_project(
+        {
+            "tox.ini": tox_ini_template.format(env=env, extras=f"min_req_constraints=\n{req_str}"),
+            "setup.cfg": setup_cfg_template,
+            "test_file.py": test_file_template_,
+            "setup.py": setup_py_template,
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+
+    result.assert_success()
+
+
+@pytest.mark.parametrize("full_path", [True, False])
+def test_constrains_path(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    tmp_path: "Path",
+    *,
+    full_path: bool,
+) -> None:
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    monkeypatch.setenv("MIN_REQ", "1")
+    project = tox_project(
+        {
+            "tox.ini": tox_ini_template.format(env=env, extras=""),
+            "pyproject.toml": pyproject_toml_template,
+            "test_file.py": test_file_template.format(cmp="=="),
+        },
+        base=data_dir / "package_data",
+    )
+
+    file_path = tmp_path
+    if full_path:
+        file_path = file_path / "constraints.txt"
+
+    result = project.run("run", "--min-req-constraints-path", str(file_path))
+
+    result.assert_success()
+
+    assert (tmp_path / "constraints.txt").exists()
 
 
 test_file_template_six = """

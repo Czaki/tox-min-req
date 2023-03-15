@@ -16,13 +16,13 @@ else:
 version_constrains = re.compile(r"([a-zA-Z0-9_\-]+)([><=!]+)([0-9\.]+)")
 
 
-def _parse_single_requirement(line: str, python_version: str, python_full_version: str) -> Dict[str, str]:
+def parse_single_requirement(line: str, python_version: str, python_full_version: str) -> Dict[str, str]:
     req = Requirement(line)
     if req.marker is not None and not req.marker.evaluate(
         {"python_version": python_version, "python_full_version": python_full_version},
     ):
         return {}
-    version_li = [str(x).replace(">=", "") for x in req.specifier if ">=" in str(x)]
+    version_li = [str(x).replace(">=", "").replace("==", "") for x in req.specifier if ">=" in str(x) or "==" in str(x)]
     if version_li:
         return {req.name: version_li[0]}
     return {}
@@ -34,7 +34,7 @@ def _parse_setup_cfg_section(section: str, python_version: str, python_full_vers
         line = line.strip()
         if line.startswith("#") or not line or ">=" not in line:
             continue
-        res.update(_parse_single_requirement(line, python_version, python_full_version))
+        res.update(parse_single_requirement(line, python_version, python_full_version))
     return res
 
 
@@ -61,8 +61,8 @@ def parse_pyproject_toml(path: Union[str, Path], python_version: str, python_ful
         data = toml_loads(f.read())
     base_constrains: Dict[str, str] = {}
     for line in data["project"]["dependencies"]:
-        base_constrains.update(_parse_single_requirement(line, python_version, python_full_version))
+        base_constrains.update(parse_single_requirement(line, python_version, python_full_version))
     for extra in data["project"]["optional-dependencies"]:
         for line in data["project"]["optional-dependencies"][extra]:
-            base_constrains.update(_parse_single_requirement(line, python_version, python_full_version))
+            base_constrains.update(parse_single_requirement(line, python_version, python_full_version))
     return base_constrains
