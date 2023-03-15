@@ -65,6 +65,7 @@ omit = [
 ]
 source = [
   "tox_min_req",
+  "tests",
 ]
 
 [tool.coverage.report]
