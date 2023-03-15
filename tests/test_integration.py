@@ -1,3 +1,4 @@
+import os
 import shutil
 import sys
 from typing import TYPE_CHECKING
@@ -227,6 +228,42 @@ def test_additional_constrains(
     result.assert_success()
 
 
+def test_additional_constrains_full_path(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    tmp_path: "Path",
+) -> None:
+    monkeypatch.setenv("MIN_REQ", "1")
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+
+    test_file_template_ = test_file_template.format(cmp="==")
+    test_file_template_ += 'import coverage\ndef test_click_version():\n    assert coverage.__version__ == "6.5.0"\n'
+    test_file_template_ = test_file_template_.replace("1.13.0", "1.14.0")
+
+    req_str = "\n".join(
+        f"    {val}"
+        for val in ["coverage==6.5.0", "babel==2.6.0", "six==1.14.0", f"-r '{tmp_path}/constraints_dummy.txt'"]
+    )
+
+    with (tmp_path / "constraints_dummy.txt").open("w") as f:
+        f.write("wheel==0.37.0")
+
+    project = tox_project(
+        {
+            "tox.ini": tox_ini_template.format(env=env, extras=f"min_req_constraints=\n{req_str}"),
+            "setup.cfg": setup_cfg_template,
+            "test_file.py": test_file_template_,
+            "setup.py": setup_py_template,
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+
+    result.assert_success()
+
+
 @pytest.mark.parametrize("full_path", [True, False])
 @pytest.mark.parametrize("use_cli", [True, False])
 def test_constrains_path(
@@ -307,7 +344,7 @@ def test_proper_version_handle(  # noqa: PLR0913
     env: str,
     target_six_version: str,
 ) -> None:
-    if not shutil.which(f"python{python}"):
+    if not shutil.which(f"python{python}") and os.environ.get("REQUIRE_ALL_TEST", "0") == "0":
         pytest.skip(f"Python {python} is not installed")
     monkeypatch.setenv("MIN_REQ", "1")
     constrains_list = "\n".join(
