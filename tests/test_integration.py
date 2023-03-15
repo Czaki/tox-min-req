@@ -198,12 +198,9 @@ def test_additional_constrains(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
     data_dir: "Path",
-    tmp_path: "Path",
 ) -> None:
     monkeypatch.setenv("MIN_REQ", "1")
     env = f"{sys.version_info[0]}{sys.version_info[1]}"
-
-    (tmp_path / "constraints_dummy.txt").write_text("wheel==0.37.0")
 
     test_file_template_ = test_file_template.format(cmp="==")
     test_file_template_ += 'import coverage\ndef test_click_version():\n    assert coverage.__version__ == "6.5.0"\n'
@@ -211,7 +208,7 @@ def test_additional_constrains(
 
     req_str = "\n".join(
         f"    {val}"
-        for val in ["coverage==6.5.0", "babel==2.6.0", "six==1.14.0", f"-r {tmp_path / 'constraints_dummy.txt'}"]
+        for val in ["coverage==6.5.0", "babel==2.6.0", "six==1.14.0", "-r '{project_dir}/constraints_dummy.txt'"]
     )
 
     project = tox_project(
@@ -220,6 +217,7 @@ def test_additional_constrains(
             "setup.cfg": setup_cfg_template,
             "test_file.py": test_file_template_,
             "setup.py": setup_py_template,
+            "constraints_dummy.txt": "wheel==0.37.0",
         },
         base=data_dir / "package_data",
     )
@@ -230,6 +228,7 @@ def test_additional_constrains(
 
 
 @pytest.mark.parametrize("full_path", [True, False])
+@pytest.mark.parametrize("use_cli", [True, False])
 def test_constrains_path(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
@@ -237,6 +236,7 @@ def test_constrains_path(
     tmp_path: "Path",
     *,
     full_path: bool,
+    use_cli: bool,
 ) -> None:
     env = f"{sys.version_info[0]}{sys.version_info[1]}"
     monkeypatch.setenv("MIN_REQ", "1")
@@ -249,15 +249,27 @@ def test_constrains_path(
         base=data_dir / "package_data",
     )
 
-    file_path = tmp_path
-    if full_path:
-        file_path = file_path / "constraints.txt"
+    env_path = tmp_path / "env"
+    env_path.mkdir()
 
-    result = project.run("run", "--min-req-constraints-path", str(file_path))
+    if full_path:
+        monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path / "constraints.txt"))
+    else:
+        monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path))
+
+    expected_file = env_path / "constraints.txt"
+    extra_args = []
+    if use_cli:
+        cli_path = tmp_path / "cli"
+        cli_path.mkdir()
+        expected_file = cli_path / "constraints.txt"
+        extra_args = ["--min-req-constraints-path", str(cli_path / "constraints.txt") if full_path else str(cli_path)]
+
+    result = project.run("run", *extra_args)
 
     result.assert_success()
 
-    assert (tmp_path / "constraints.txt").exists()
+    assert expected_file.exists()
 
 
 test_file_template_six = """

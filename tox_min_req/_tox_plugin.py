@@ -16,6 +16,9 @@ def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extr
     if tox_env.options.min_req_constraints_path:
         base_path = Path(tox_env.options.min_req_constraints_path)
         constrain_file = base_path / "constraints.txt" if base_path.is_dir() else base_path
+    elif os.environ.get("TOX_MIN_REQ_CONSTRAINTS", ""):
+        base_path = Path(os.environ["TOX_MIN_REQ_CONSTRAINTS"])
+        constrain_file = base_path / "constraints.txt" if base_path.is_dir() else base_path
     else:
         constrain_file = tox_env.env_tmp_dir / "constraints.txt"
 
@@ -55,6 +58,8 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
         for line in tox_env.conf["min_req_constraints"].split("\n"):
             strip_line = line.strip()
             if strip_line.startswith("-r"):
+                if "{project_dir}" in strip_line:
+                    strip_line = strip_line.replace("{project_dir}", str(project_path))
                 extra_lines.append(strip_line)
             else:
                 dependencies.update(parse_single_requirement(strip_line, python_version, python_full_version))
