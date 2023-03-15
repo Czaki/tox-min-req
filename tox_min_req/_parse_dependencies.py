@@ -30,8 +30,8 @@ def parse_single_requirement(line: str, python_version: str, python_full_version
 
 def _parse_setup_cfg_section(section: str, python_version: str, python_full_version: str) -> Dict[str, str]:
     res: Dict[str, str] = {}
-    for line in section.splitlines():
-        line = line.strip()
+    for raw_line in section.splitlines():
+        line = raw_line.strip()
         if line.startswith("#") or not line or ">=" not in line:
             continue
         res.update(parse_single_requirement(line, python_version, python_full_version))
