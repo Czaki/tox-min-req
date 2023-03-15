@@ -15,6 +15,8 @@ else:
 
 version_constrains = re.compile(r"([a-zA-Z0-9_\-]+)([><=!]+)([0-9\.]+)")
 
+__all__ = ("parse_setup_cfg", "parse_pyproject_toml", "parse_single_requirement")
+
 
 def parse_single_requirement(line: str, python_version: str, python_full_version: str) -> Dict[str, str]:
     req = Requirement(line)

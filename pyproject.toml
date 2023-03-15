@@ -63,12 +63,16 @@ parallel = true
 omit = [
   "tox_min_req/__about__.py",
 ]
+source = [
+  "tox_min_req",
+]
 
 [tool.coverage.report]
 exclude_lines = [
   "no cov",
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
+  "pragma: no cover"
 ]
 
 

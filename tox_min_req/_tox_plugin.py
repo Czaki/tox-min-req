@@ -49,7 +49,7 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
         dependencies = parse_setup_cfg(project_path / "setup.cfg", python_version, python_full_version)
     elif (project_path / "pyproject.toml").exists():
         dependencies = parse_pyproject_toml(project_path / "pyproject.toml", python_version, python_full_version)
-    else:
+    else:  # pragma: no cover
         return
 
     extra_lines = []
