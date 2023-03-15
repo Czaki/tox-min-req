@@ -1,3 +1,4 @@
+import os
 import shutil
 import sys
 from typing import TYPE_CHECKING
@@ -343,7 +344,7 @@ def test_proper_version_handle(  # noqa: PLR0913
     env: str,
     target_six_version: str,
 ) -> None:
-    if not shutil.which(f"python{python}"):
+    if not shutil.which(f"python{python}") and os.environ.get("REQUIRE_ALL_TEST", "0") == "0":
         pytest.skip(f"Python {python} is not installed")
     monkeypatch.setenv("MIN_REQ", "1")
     constrains_list = "\n".join(
