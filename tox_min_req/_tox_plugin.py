@@ -42,7 +42,7 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
     if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
         return
 
-    project_path = tox_env.core._root  # noqa: SLF001
+    project_path = tox_env.core["package_root"]
     python_version = ".".join(str(x) for x in tox_env.base_python.version_info[:2])
     python_full_version = ".".join(str(x) for x in tox_env.base_python.version_info[:3])
     if (project_path / "setup.cfg").exists():
