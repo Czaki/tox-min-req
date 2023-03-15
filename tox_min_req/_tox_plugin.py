@@ -6,14 +6,15 @@ from tox.plugin import impl
 from ._parse_dependencies import parse_pyproject_toml, parse_setup_cfg
 
 if TYPE_CHECKING:
-    from tox.tox_env.api import ToxEnv
+    from tox.session.state import State
+    from tox.tox_env.api import EnvConfigSet, ToxEnv
 
 
 @impl
 def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str) -> None:  # noqa: ARG001, ANN401
     if of_type != "deps" and section != "PythonRun":
         return
-    if "MIN_REQ" not in os.environ or os.environ["MIN_REQ"] == "0":
+    if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
         return
 
     project_path = tox_env.core._root  # noqa: SLF001
@@ -35,3 +36,13 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
         tox_env.environment_variables["PIP_CONSTRAINT"] += f" {str(constrain_file)}"
     else:
         tox_env.environment_variables["PIP_CONSTRAINT"] = str(constrain_file)
+
+
+@impl
+def tox_add_env_config(env_conf: "EnvConfigSet", state: "State") -> None:  # noqa: ARG001
+    env_conf.add_config(
+        keys=["min_req"],
+        of_type=bool,
+        default=False,
+        desc="Set to true to use the minimum required version of the dependencies",
+    )

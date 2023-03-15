@@ -16,6 +16,7 @@ envlist = py{env}
 extras = test
 recreate = True
 commands = pytest test_file.py
+{extras}
 """
 
 setup_cfg_template = """
@@ -98,7 +99,7 @@ def test_tox_project_creator_setup_sfg(
     env = f"{sys.version_info[0]}{sys.version_info[1]}"
     project = tox_project(
         {
-            "tox.ini": tox_ini_template.format(env=env),
+            "tox.ini": tox_ini_template.format(env=env, extras=""),
             "setup.cfg": setup_cfg_template,
             "test_file.py": test_file_template.format(cmp=cmp),
             "setup.py": setup_py_template,
@@ -123,7 +124,29 @@ def test_tox_project_creator_pyproject(
     env = f"{sys.version_info[0]}{sys.version_info[1]}"
     project = tox_project(
         {
-            "tox.ini": tox_ini_template.format(env=env),
+            "tox.ini": tox_ini_template.format(env=env, extras=""),
+            "pyproject.toml": pyproject_toml_template,
+            "test_file.py": test_file_template.format(cmp=cmp),
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+
+    result.assert_success()
+
+
+@pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
+def test_tox_project_creator_pyproject_min_req_config(
+    tox_project: ToxProjectCreator,
+    data_dir: "Path",
+    cmp: str,
+    req: str,
+) -> None:
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    project = tox_project(
+        {
+            "tox.ini": tox_ini_template.format(env=env, extras=f"min_req={req}"),
             "pyproject.toml": pyproject_toml_template,
             "test_file.py": test_file_template.format(cmp=cmp),
         },
@@ -153,7 +176,7 @@ def test_preserve_constrains(
     )
     project = tox_project(
         {
-            "tox.ini": tox_ini_template.format(env=env),
+            "tox.ini": tox_ini_template.format(env=env, extras=""),
             "setup.cfg": setup_cfg_template,
             "test_file.py": test_file_template_,
             "setup.py": setup_py_template,
@@ -210,7 +233,7 @@ def test_proper_version_handle(  # noqa: PLR0913
     )
     project = tox_project(
         {
-            "tox.ini": tox_ini_template.format(env=env),
+            "tox.ini": tox_ini_template.format(env=env, extras=""),
             "pyproject.toml": pyproject_toml_template_base.format(deps=constrains_list),
             "test_file.py": test_file_template_six.format(six_version=target_six_version),
         },
