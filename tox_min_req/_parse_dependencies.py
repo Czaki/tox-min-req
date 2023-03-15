@@ -19,6 +19,14 @@ __all__ = ("parse_setup_cfg", "parse_pyproject_toml", "parse_single_requirement"
 
 
 def parse_single_requirement(line: str, python_version: str, python_full_version: str) -> Dict[str, str]:
+    """
+    Parse single requirement line. It resolve requirement against current system and provided python version.
+
+    :param line: line with requirement
+    :param python_version: major.minor version of python
+    :param python_full_version: major.minor.patch version of python
+    :return: empty dict if the requirement is not valid or the requirement name and version
+    """
     req = Requirement(line)
     if req.marker is not None and not req.marker.evaluate(
         {"python_version": python_version, "python_full_version": python_full_version},
@@ -41,7 +49,14 @@ def _parse_setup_cfg_section(section: str, python_version: str, python_full_vers
 
 
 def parse_setup_cfg(path: Union[str, Path], python_version: str, python_full_version: str) -> Dict[str, str]:
-    """Parse the setup.cfg file and return a dict of the dependencies and their lower version constraints."""
+    """
+    Parse the setup.cfg file and return a dict of the dependencies and their lower version constraints.
+
+    :param path: path to setup.cfg file
+    :param python_version: major.minor version of python
+    :param python_full_version: major.minor.patch version of python
+    :return: dict of the dependencies that fit to environment and their lower version constraints
+    """
     config = ConfigParser()
     config.read(path)
     base_constrains = _parse_setup_cfg_section(
@@ -58,7 +73,14 @@ def parse_setup_cfg(path: Union[str, Path], python_version: str, python_full_ver
 
 
 def parse_pyproject_toml(path: Union[str, Path], python_version: str, python_full_version: str) -> Dict[str, str]:
-    """Parse the pyproject.toml file and return a dict of the dependencies and their lower version constraints."""
+    """
+    Parse the pyproject.toml file and return a dict of the dependencies and their lower version constraints.
+
+    :param path: path to pyproject.toml file
+    :param python_version: major.minor version of python
+    :param python_full_version: major.minor.patch version of python
+    :return: dict of the dependencies that fit to environment and their lower version constraints
+    """
     with Path(path).open() as f:
         data = toml_loads(f.read())
     base_constrains: Dict[str, str] = {}
