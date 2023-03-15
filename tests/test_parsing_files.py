@@ -19,13 +19,16 @@ def test_setup_cfg_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
         "scipy": "1.2.0",
     }
 
-    assert parse_setup_cfg(setup_file, python_version="3.7") == {"numpy": "1.16.0", **constrains}
-    assert parse_setup_cfg(setup_file, python_version="3.8") == {
+    assert parse_setup_cfg(setup_file, python_version="3.7", python_full_version="3.7.1") == {
+        "numpy": "1.16.0",
+        **constrains,
+    }
+    assert parse_setup_cfg(setup_file, python_version="3.8", python_full_version="3.8.3") == {
         "numpy": "1.18.0",
         **constrains,
     }
     monkeypatch.setattr("sys.platform", "win32")
-    assert parse_setup_cfg(setup_file, python_version="3.8") == {
+    assert parse_setup_cfg(setup_file, python_version="3.8", python_full_version="3.8.3") == {
         "numpy": "1.18.0",
         "pandas": "0.25.0",
         **constrains,
@@ -43,13 +46,16 @@ def test_pyproject_toml_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch
         "scipy": "1.2.0",
     }
 
-    assert parse_pyproject_toml(pyproject_file, python_version="3.7") == {"numpy": "1.16.0", **constrains}
-    assert parse_pyproject_toml(pyproject_file, python_version="3.8") == {
+    assert parse_pyproject_toml(pyproject_file, python_version="3.7", python_full_version="3.7.1") == {
+        "numpy": "1.16.0",
+        **constrains,
+    }
+    assert parse_pyproject_toml(pyproject_file, python_version="3.8", python_full_version="3.8.3") == {
         "numpy": "1.18.0",
         **constrains,
     }
     monkeypatch.setattr("sys.platform", "win32")
-    assert parse_pyproject_toml(pyproject_file, python_version="3.8") == {
+    assert parse_pyproject_toml(pyproject_file, python_version="3.8", python_full_version="3.8.3") == {
         "numpy": "1.18.0",
         "pandas": "0.25.0",
         **constrains,

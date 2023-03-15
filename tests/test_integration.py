@@ -1,3 +1,4 @@
+import shutil
 import sys
 from typing import TYPE_CHECKING
 
@@ -42,7 +43,7 @@ setup()
 """
 
 
-pyproject_toml_template = """
+pyproject_toml_template_base = """
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -52,16 +53,17 @@ name = "test_package"
 version = "0.0.1"
 description = "Test package"
 dependencies = [
-    "six>=1.13.0",
-    "click>=7.1.2",
+    {deps}
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest>=7.1.0",
-    "coverage"
 ]
 """
+
+pyproject_toml_template = pyproject_toml_template_base.format(deps='    "six>=1.13.0",\n    "click>=7.1.2",\n')
+
 
 test_file_template = """
 import pytest
@@ -161,4 +163,59 @@ def test_preserve_constrains(
 
     result = project.run("run")
 
+    result.assert_success()
+
+
+test_file_template_six = """
+import pytest
+import six
+
+import sample_package
+
+def test_pytest_version():
+    assert pytest.__version__ == "7.1.0"
+
+def test_six_version():
+    assert six.__version__ == "{six_version}"
+
+def test_sample_package():
+    assert sample_package.sample_function() == 42
+"""
+
+
+PYTHON_VER_LI = [
+    ("3.7", "37", "1.10.0"),
+    ("3.8", "38", "1.11.0"),
+    ("3.9", "39", "1.12.0"),
+    ("3.10", "310", "1.13.0"),
+    ("3.11", "311", "1.14.0"),
+]
+
+
+@pytest.mark.parametrize(("python", "env", "target_six_version"), PYTHON_VER_LI)
+def test_proper_version_handle(  # noqa: PLR0913
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    python: str,
+    env: str,
+    target_six_version: str,
+) -> None:
+    if not shutil.which(f"python{python}"):
+        pytest.skip(f"Python {python} is not installed")
+    monkeypatch.setenv("MIN_REQ", "1")
+    constrains_list = "\n".join(
+        f"    'six>={six_version}; python_version == \"{python_version}\"',"
+        for python_version, _, six_version in PYTHON_VER_LI
+    )
+    project = tox_project(
+        {
+            "tox.ini": tox_ini_template.format(env=env),
+            "pyproject.toml": pyproject_toml_template_base.format(deps=constrains_list),
+            "test_file.py": test_file_template_six.format(six_version=target_six_version),
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
     result.assert_success()

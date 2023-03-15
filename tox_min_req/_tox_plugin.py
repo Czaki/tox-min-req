@@ -17,10 +17,12 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
         return
 
     project_path = tox_env.core._root  # noqa: SLF001
+    python_version = ".".join(str(x) for x in tox_env.base_python.version_info[:2])
+    python_full_version = ".".join(str(x) for x in tox_env.base_python.version_info[:3])
     if (project_path / "setup.cfg").exists():
-        dependencies = parse_setup_cfg(project_path / "setup.cfg", "3.8.0")
+        dependencies = parse_setup_cfg(project_path / "setup.cfg", python_version, python_full_version)
     elif (project_path / "pyproject.toml").exists():
-        dependencies = parse_pyproject_toml(project_path / "pyproject.toml", "3.8.0")
+        dependencies = parse_pyproject_toml(project_path / "pyproject.toml", python_version, python_full_version)
     else:
         return
 
