@@ -4,6 +4,9 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/tox-min-req.svg)](https://pypi.org/project/tox-min-req)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 [![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
+[![Tests](https://github.com/Czaki/tox-min-req/actions/workflows/test.yaml/badge.svg)](https://github.com/Czaki/tox-min-req/actions/workflows/test.yaml)
+[![PyPI - License](https://img.shields.io/pypi/l/tox-min-req.svg)](https://pypi.org/project/tox-min-req)
+[![codecov](https://codecov.io/gh/Czaki/tox-min-req/branch/main/graph/badge.svg?token=QrHmd50nYq)](https://codecov.io/gh/Czaki/tox-min-req)
 -----
 
 **Table of Contents**

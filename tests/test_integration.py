@@ -3,7 +3,7 @@ import sys
 from typing import TYPE_CHECKING
 
 import pytest
-from tox.pytest import ToxProjectCreator, init_fixture  # noqa: F401, TCH002
+from tox.pytest import ToxProjectCreator, init_fixture  # noqa: F401
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,7 +30,7 @@ packages = sample_package
 install_requires =
     six>=1.13.0
     click>=7.1.2
-    
+
 [options.extras_require]
 test =
     pytest>=7.1.0
@@ -75,13 +75,13 @@ import sample_package
 
 def test_pytest_version():
     assert pytest.__version__ {cmp} "7.1.0"
-    
+
 def test_six_version():
     assert six.__version__ {cmp} "1.13.0"
-    
+
 def test_click_version():
     assert click.__version__ {cmp} "7.1.2"
-    
+
 def test_sample_package():
     assert sample_package.sample_function() == 42
 """

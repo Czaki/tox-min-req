@@ -11,7 +11,7 @@ name = "tox-min-req"
 description = 'TOX plugin to run tests with minimal requirements base on setup.cfg or pyproject.toml'
 readme = "README.md"
 requires-python = ">=3.7"
-license = {text = "BSD-3-Clause"}
+license = {text = "MIT"}
 keywords = []
 authors = [
   { name = "Grzegorz Bokota", email = "bokota+github@gmail.com" },
@@ -63,12 +63,16 @@ parallel = true
 omit = [
   "tox_min_req/__about__.py",
 ]
+source = [
+  "tox_min_req",
+]
 
 [tool.coverage.report]
 exclude_lines = [
   "no cov",
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
+  "pragma: no cover"
 ]
 
 
