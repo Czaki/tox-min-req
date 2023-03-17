@@ -24,6 +24,16 @@ satisfied.
 To use this plugin you need to use `MIN_REQ` environment variable either in call or in `setenv` section 
 of tox configuration.
 
+## Why use this inseted of `deps` attribute of env section?
+
+One of the possible solution is to use `deps` section in tox configuration to install dependecies in older version. 
+
+But `deps` and package are installed in two independent steps. So it means that 
+some of dependencies could be upgraded or downgraded when installing package. 
+
+The `PIP_CONSTRAINT` variable is used to pin the dependencies. And it will apply to call of `pip install` during dependency resolving. 
+
+
 ## Installation
 
 ```console
