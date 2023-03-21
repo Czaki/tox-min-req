@@ -57,7 +57,7 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
     if tox_env.conf["min_req_constraints"]:
         for line in tox_env.conf["min_req_constraints"].split("\n"):
             strip_line = line.strip()
-            if strip_line.startswith("-r"):
+            if strip_line.startswith(("-r", "-c")):
                 if "{project_dir}" in strip_line:
                     strip_line = strip_line.replace("{project_dir}", str(project_path))
                 extra_lines.append(strip_line)
