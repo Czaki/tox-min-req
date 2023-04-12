@@ -364,3 +364,26 @@ def test_proper_version_handle(  # noqa: PLR0913
 
     result = project.run("run")
     result.assert_success()
+
+
+def test_reset_pip_constrains(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    tmp_path: "Path",
+) -> None:
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    monkeypatch.setenv("MIN_REQ", "1")
+    (tmp_path / "constraints.txt").write_text("six==1.14.0")
+    monkeypatch.setenv("PIP_CONSTRAINT", str(tmp_path / "constraints.txt"))
+    project = tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras="setenv =\n    PIP_CONSTRAINT="),
+            "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
+            "test_file.py": TEST_FILE_TEMPLATE.format(cmp="=="),
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+    result.assert_success()
