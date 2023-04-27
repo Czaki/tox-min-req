@@ -68,3 +68,4 @@ def test_parse_single_requirement():
     assert parse_single_requirement("numpy>=1.16.0", p_ver, py_full_ver) == {"numpy": "1.16.0"}
     assert parse_single_requirement("numpy>=1.16.0 ; python_version < '3.8'", p_ver, py_full_ver) == {}
     assert parse_single_requirement("numpy[test]>=1.16.0", p_ver, py_full_ver) == {"numpy": "1.16.0"}
+    assert parse_single_requirement("numpy==1.16.0 # some text", p_ver, py_full_ver) == {"numpy": "1.16.0"}

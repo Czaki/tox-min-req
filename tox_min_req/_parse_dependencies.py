@@ -27,7 +27,7 @@ def parse_single_requirement(line: str, python_version: str, python_full_version
     :param python_full_version: major.minor.patch version of python
     :return: empty dict if the requirement is not valid or the requirement name and version
     """
-    req = Requirement(line)
+    req = Requirement(line.split("#", maxsplit=1)[0])
     if req.marker is not None and not req.marker.evaluate(
         {"python_version": python_version, "python_full_version": python_full_version},
     ):
