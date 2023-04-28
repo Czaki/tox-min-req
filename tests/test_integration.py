@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 import pytest
 from tox.pytest import ToxProjectCreator, init_fixture  # noqa: F401
 
+from tox_min_req._tox_plugin import CONSTRAINTS_FILE_NAME
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -292,17 +294,20 @@ def test_constrains_path(
     env_path.mkdir()
 
     if full_path:
-        monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path / "constraints.txt"))
+        monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path / CONSTRAINTS_FILE_NAME))
     else:
         monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path))
 
-    expected_file = env_path / "constraints.txt"
+    expected_file = env_path / CONSTRAINTS_FILE_NAME
     extra_args = []
     if use_cli:
         cli_path = tmp_path / "cli"
         cli_path.mkdir()
-        expected_file = cli_path / "constraints.txt"
-        extra_args = ["--min-req-constraints-path", str(cli_path / "constraints.txt") if full_path else str(cli_path)]
+        expected_file = cli_path / CONSTRAINTS_FILE_NAME
+        extra_args = [
+            "--min-req-constraints-path",
+            str(cli_path / CONSTRAINTS_FILE_NAME) if full_path else str(cli_path),
+        ]
 
     result = project.run("run", *extra_args)
 

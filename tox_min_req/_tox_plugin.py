@@ -12,15 +12,18 @@ if TYPE_CHECKING:
     from tox.tox_env.api import EnvConfigSet, ToxEnv
 
 
+CONSTRAINTS_FILE_NAME = "min_req_constraints.txt"
+
+
 def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extra_lines: List[str]) -> Path:
     if tox_env.options.min_req_constraints_path:
         base_path = Path(tox_env.options.min_req_constraints_path)
-        constrain_file = base_path / "constraints.txt" if base_path.is_dir() else base_path
+        constrain_file = base_path / CONSTRAINTS_FILE_NAME if base_path.is_dir() else base_path
     elif os.environ.get("TOX_MIN_REQ_CONSTRAINTS", ""):
         base_path = Path(os.environ["TOX_MIN_REQ_CONSTRAINTS"])
-        constrain_file = base_path / "constraints.txt" if base_path.is_dir() else base_path
+        constrain_file = base_path / CONSTRAINTS_FILE_NAME if base_path.is_dir() else base_path
     else:
-        constrain_file = tox_env.env_tmp_dir / "constraints.txt"
+        constrain_file = tox_env.env_tmp_dir.parent / CONSTRAINTS_FILE_NAME
 
     with constrain_file.open("w") as f:
         f.write("\n".join(f"{n}=={v}" for n, v in dependencies.items()))
@@ -37,7 +40,7 @@ def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extr
 
 @impl
 def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str) -> None:  # noqa: ARG001, ANN401
-    if of_type != "deps" and section != "PythonRun":
+    if of_type != "deps" or section != "PythonRun":
         return
     if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
         return
