@@ -15,23 +15,24 @@
 - [License](#license)
 - [Usage](#usage)
 
-tox-min-req is a [tox](https://tox.wiki/) plugin that simplify the 
-minimum requirements testing.
+tox-min-req is a [tox](https://tox.wiki/) plugin that simplifies  
+minimum requirements (min-req) testing.
 
-The minimum requirements is to validate if minimum requirements are 
+Minimum requirements testing is important to validate whether the minimum requirements are 
 satisfied.
 
-To use this plugin you need to use `MIN_REQ` environment variable either in call or in `setenv` section 
-of tox configuration.
+After installing, to use this plugin you need to use `MIN_REQ` environment variable either in the call
+(e.g. `MIN_REQ=1 tox -e py38-linux-pyqt5`) or in `setenv` section of your tox configuration.
 
-## Why use this inseted of `deps` attribute of env section?
+## Why use this instead of `deps` attribute of the tox env section?
 
-One of the possible solution is to use `deps` section in tox configuration to install dependecies in older version. 
+One alternative solution is to use the `deps` section in tox configuration to install min-req dependecies. 
 
-But `deps` and package are installed in two independent steps. So it means that 
-some of dependencies could be upgraded or downgraded when installing package. 
+However, packages from `deps` and the actual package to be tested are installed in two independent steps. This means that 
+some of the min-req dependencies could be upgraded or downgraded when installing the actual package. 
 
-The `PIP_CONSTRAINT` variable is used to pin the dependencies. And it will apply to call of `pip install` during dependency resolving. 
+The `PIP_CONSTRAINT` variable is used to pin the dependencies; it will apply to the call of `pip install`
+during dependency resolving. 
 
 
 ## Installation
@@ -55,13 +56,13 @@ $ MIN_REQ=1 tox -e py37
 
 ## Configuration options
 
-The `tox-min-req` plugin allow to provide following environment configuration options:
+The `tox-min-req` plugin allows one to provide the following environment configuration options:
 
-* `min_req` - set to `1` to enable the minimum requirements testing, could be used instead of environment variable.
-* `min_req_constraints` - list of additional constrains that will be used to generate the constrains file. 
-   It could be useful in following scenarios:
-  * Some of dependencies in old version is incompatible with its dependencies in latest version. (see Known issues)
-  * Maintainers would like to test also some problematic dependencies in old version, but not oldest supported version.
+* `min_req` - set to `1` to enable the minimum requirements testing; can be used instead of setting the environment variable.
+* `min_req_constraints` - list of additional constraints that will be used to generate the constraints file. 
+   This is useful in following scenarios:
+  * Some of dependencies of an old version are incompatible with  dependencies in latest version (see Known issues, below).
+  * Maintainers would like to also test some problematic dependencies an old version, but not the oldest supported version.
 
 ```ini
 [tox]
@@ -79,28 +80,28 @@ min_req_constraints=
     -r {project_dir}/constraints.txt
 ```
 
-Please note that `-r {project_dir}/constraints.txt` will be put in generated constrains file, not parsed.
+Please note that `-r {project_dir}/constraints.txt` will be put in the generated constraints file—it will not be parsed.
 
 # Known issues
 
 ## Pinning only direct dependencies
 
-As this plugin parse only `setup.cfg` or `pyproject.toml` file, it is not possible to pin the indirect dependencies.
-To provide the indirect dependencies pinning, the `min_req_constraints` environment configuration option could be used.
+Because this plugin only parses `setup.cfg` or `pyproject.toml` files, it is not possible to pin any indirect dependencies.
+To pin indirect dependencies, the `min_req_constraints` environment configuration option should be used.
 
-## Space in constrains file path
-`pip` is using the space as file path separator in `PIP_CONSTRAINT` variable. 
-The plugin is storing the generated constrains file in the `.tox` temporary directory.
-If the path to the temporary directory contains space, the `pip` will not be able to find the constrains file.
+## Spaces in the constraints file path
+`pip` uses spaces as file path separators in the `PIP_CONSTRAINT` variable. 
+This plugin stores the generated constraints file in a `.tox` temporary directory.
+As a result, if the path to the temporary directory contains spaces, then `pip` will not be able to find the constraints file.
 
-In such situation there is a need to set the `TOX_MIN_REQ_CONSTRAINTS` environment variable
-to the path where constrains file could be written.
+In such a scenatio, one needs to set the `TOX_MIN_REQ_CONSTRAINTS` environment variable
+to the path where constraints file can be written.
 
 ```bash
 $ TOX_MIN_REQ_CONSTRAINTS=/tmp MIN_REQ=1 tox -e py37
 ```
 
-It is also possible to use the `--min-req-constraints-path` command line option to set the path to the constrains file.
+It is also possible to use the `--min-req-constraints-path` command line option to set the path to the constraints file.
 
 ```bash
 $ tox --min-req-constraints-path=/tmp -e py37
