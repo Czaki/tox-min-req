@@ -95,7 +95,7 @@ jobs:
   coverage_prepare:
     name: Prepare coverage
     runs-on: ubuntu-latest
-    needs: [ test_coverage, test_minimal ]
+    needs: [ test, test_different_python ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
