@@ -47,7 +47,6 @@ Source = "https://github.com/czaki/tox-min-req"
 [project.optional-dependencies]
 testing = [
   "pytest",
-  "pytest-cov",
   "tox[testing]",
 ]
 
