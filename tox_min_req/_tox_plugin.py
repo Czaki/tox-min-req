@@ -35,6 +35,11 @@ def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extr
     else:
         tox_env.environment_variables["PIP_CONSTRAINT"] = str(constrain_file)
 
+    if tox_env.environment_variables.get("UV_CONSTRAINT", ""):
+        tox_env.environment_variables["UV_CONSTRAINT"] += f" {str(constrain_file)}"
+    else:
+        tox_env.environment_variables["UV_CONSTRAINT"] = str(constrain_file)
+
     return constrain_file
 
 

@@ -31,7 +31,7 @@ One alternative solution is to use the `deps` section in tox configuration to in
 However, packages from `deps` and the actual package to be tested are installed in two independent steps. This means that 
 some of the min-req dependencies could be upgraded or downgraded when installing the actual package. 
 
-The `PIP_CONSTRAINT` variable is used to pin the dependencies; it will apply to the call of `pip install`
+The `PIP_CONSTRAINT` and `UV_CONSTRAINT` variables are used to pin the dependencies; it will apply to the call of `pip install`
 during dependency resolving. 
 
 
