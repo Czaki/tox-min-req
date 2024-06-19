@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 from tox.plugin import impl
 
-from ._parse_dependencies import parse_pyproject_toml, parse_setup_cfg, parse_single_requirement
+from ._parse_dependencies import (
+    parse_pyproject_toml,
+    parse_setup_cfg,
+    parse_single_requirement,
+)
 
 if TYPE_CHECKING:
     from tox.config.cli.parser import ToxParser
@@ -15,13 +21,19 @@ if TYPE_CHECKING:
 CONSTRAINTS_FILE_NAME = "min_req_constraints.txt"
 
 
-def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extra_lines: List[str]) -> Path:
+def _write_constrains_file(
+    tox_env: ToxEnv, dependencies: dict[str, str], extra_lines: list[str]
+) -> Path:
     if tox_env.options.min_req_constraints_path:
         base_path = Path(tox_env.options.min_req_constraints_path)
-        constrain_file = base_path / CONSTRAINTS_FILE_NAME if base_path.is_dir() else base_path
+        constrain_file = (
+            base_path / CONSTRAINTS_FILE_NAME if base_path.is_dir() else base_path
+        )
     elif os.environ.get("TOX_MIN_REQ_CONSTRAINTS", ""):
         base_path = Path(os.environ["TOX_MIN_REQ_CONSTRAINTS"])
-        constrain_file = base_path / CONSTRAINTS_FILE_NAME if base_path.is_dir() else base_path
+        constrain_file = (
+            base_path / CONSTRAINTS_FILE_NAME if base_path.is_dir() else base_path
+        )
     else:
         constrain_file = tox_env.env_tmp_dir.parent / CONSTRAINTS_FILE_NAME
 
@@ -31,7 +43,7 @@ def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extr
         f.write("\n".join(extra_lines))
 
     if tox_env.environment_variables.get("PIP_CONSTRAINT", ""):
-        tox_env.environment_variables["PIP_CONSTRAINT"] += f" {str(constrain_file)}"
+        tox_env.environment_variables["PIP_CONSTRAINT"] += f" {constrain_file!s}"
     else:
         tox_env.environment_variables["PIP_CONSTRAINT"] = str(constrain_file)
 
@@ -39,7 +51,7 @@ def _write_constrains_file(tox_env: "ToxEnv", dependencies: Dict[str, str], extr
 
 
 @impl
-def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str) -> None:  # noqa: ARG001, ANN401
+def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) -> None:
     if of_type != "deps" or section != "PythonRun":
         return
     if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
@@ -49,9 +61,13 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
     python_version = ".".join(str(x) for x in tox_env.base_python.version_info[:2])
     python_full_version = ".".join(str(x) for x in tox_env.base_python.version_info[:3])
     if (project_path / "setup.cfg").exists():
-        dependencies = parse_setup_cfg(project_path / "setup.cfg", python_version, python_full_version)
+        dependencies = parse_setup_cfg(
+            project_path / "setup.cfg", python_version, python_full_version
+        )
     elif (project_path / "pyproject.toml").exists():
-        dependencies = parse_pyproject_toml(project_path / "pyproject.toml", python_version, python_full_version)
+        dependencies = parse_pyproject_toml(
+            project_path / "pyproject.toml", python_version, python_full_version
+        )
     else:  # pragma: no cover
         return
 
@@ -65,13 +81,17 @@ def tox_on_install(tox_env: "ToxEnv", arguments: Any, section: str, of_type: str
                     strip_line = strip_line.replace("{project_dir}", str(project_path))
                 extra_lines.append(strip_line)
             else:
-                dependencies.update(parse_single_requirement(strip_line, python_version, python_full_version))
+                dependencies.update(
+                    parse_single_requirement(
+                        strip_line, python_version, python_full_version
+                    )
+                )
 
     _write_constrains_file(tox_env, dependencies, extra_lines)
 
 
 @impl
-def tox_add_env_config(env_conf: "EnvConfigSet", state: "State") -> None:  # noqa: ARG001
+def tox_add_env_config(env_conf: EnvConfigSet, state: State) -> None:
     env_conf.add_config(
         keys=["min_req"],
         of_type=bool,
@@ -88,7 +108,7 @@ def tox_add_env_config(env_conf: "EnvConfigSet", state: "State") -> None:  # noq
 
 
 @impl
-def tox_add_option(parser: "ToxParser") -> None:
+def tox_add_option(parser: ToxParser) -> None:
     parser.add_argument(
         "--min-req-constraints-path",
         type=str,
