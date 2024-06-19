@@ -79,17 +79,19 @@ exclude_lines = [
 
 
 [tool.ruff]
-line-length = 120
-select = ["ALL"]
-ignore = ["D203", "D212"]
+line-length = 88
 target-version = "py37"
 fix = true
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint]
+select = ["F", "E", "W", "C90", "I", "D", "UP", "PL", "RUF"]
+ignore = ["D203", "D212", "E501", "PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ANN", "S101", "D"]
 
 [tool.black]
-line-length = 120
+line-length = 88
 target-version = ['py37']
 include = '\.pyi?$'
 exclude = '''

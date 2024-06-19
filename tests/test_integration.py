@@ -66,7 +66,9 @@ test = [
 ]
 """
 
-PYPROJECT_TOML_TEMPLATE = PYPROJECT_TOML_TEMPLATE_BASE.format(deps='    "six>=1.13.0",\n    "click>=7.1.2",\n')
+PYPROJECT_TOML_TEMPLATE = PYPROJECT_TOML_TEMPLATE_BASE.format(
+    deps='    "six>=1.13.0",\n    "click>=7.1.2",\n'
+)
 
 
 TEST_FILE_TEMPLATE = """
@@ -179,9 +181,7 @@ def test_preserve_constrains(
 
     test_file_template = TEST_FILE_TEMPLATE.format(cmp="==")
     test_file_template += 'import coverage\ndef test_click_version():\n    assert coverage.__version__ == "6.5.0"\n'
-    test_file_template += (
-        'import os\ndef test_environ():\n    assert len(os.environ["PIP_CONSTRAINT"].split(" ")) == 2\n'
-    )
+    test_file_template += 'import os\ndef test_environ():\n    assert len(os.environ["PIP_CONSTRAINT"].split(" ")) == 2\n'
     project = tox_project(
         {
             "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=""),
@@ -212,12 +212,19 @@ def test_additional_constrains(
     test_file_template_ = test_file_template_.replace("1.13.0", "1.14.0")
 
     req_str = "\n".join(
-        f"    {val}" for val in ["babel==2.6.0", "six==1.14.0", pref + " '{project_dir}/constraints_dummy.txt'"]
+        f"    {val}"
+        for val in [
+            "babel==2.6.0",
+            "six==1.14.0",
+            pref + " '{project_dir}/constraints_dummy.txt'",
+        ]
     )
 
     project = tox_project(
         {
-            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=f"min_req_constraints=\n{req_str}"),
+            "tox.ini": TOX_INI_TEMPLATE.format(
+                env=env, extras=f"min_req_constraints=\n{req_str}"
+            ),
             "setup.cfg": SETUP_CFG_TEMPLATE,
             "test_file.py": test_file_template_,
             "setup.py": SETUP_PY_TEMPLATE,
@@ -247,7 +254,12 @@ def test_additional_constrains_full_path(
     test_file_template_ = test_file_template_.replace("1.13.0", "1.14.0")
 
     req_str = "\n".join(
-        f"    {val}" for val in ["babel==2.6.0", "six==1.14.0", f"{pref} '{tmp_path}/constraints_dummy.txt'"]
+        f"    {val}"
+        for val in [
+            "babel==2.6.0",
+            "six==1.14.0",
+            f"{pref} '{tmp_path}/constraints_dummy.txt'",
+        ]
     )
 
     with (tmp_path / "constraints_dummy.txt").open("w") as f:
@@ -255,7 +267,9 @@ def test_additional_constrains_full_path(
 
     project = tox_project(
         {
-            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=f"min_req_constraints=\n{req_str}"),
+            "tox.ini": TOX_INI_TEMPLATE.format(
+                env=env, extras=f"min_req_constraints=\n{req_str}"
+            ),
             "setup.cfg": SETUP_CFG_TEMPLATE,
             "test_file.py": test_file_template_,
             "setup.py": SETUP_PY_TEMPLATE,
@@ -294,7 +308,9 @@ def test_constrains_path(
     env_path.mkdir()
 
     if full_path:
-        monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path / CONSTRAINTS_FILE_NAME))
+        monkeypatch.setenv(
+            "TOX_MIN_REQ_CONSTRAINTS", str(env_path / CONSTRAINTS_FILE_NAME)
+        )
     else:
         monkeypatch.setenv("TOX_MIN_REQ_CONSTRAINTS", str(env_path))
 
@@ -306,7 +322,7 @@ def test_constrains_path(
         expected_file = cli_path / CONSTRAINTS_FILE_NAME
         extra_args = [
             "--min-req-constraints-path",
-            str(cli_path / CONSTRAINTS_FILE_NAME) if full_path else str(cli_path),
+            (str(cli_path / CONSTRAINTS_FILE_NAME) if full_path else str(cli_path)),
         ]
 
     result = project.run("run", *extra_args)
@@ -339,11 +355,12 @@ PYTHON_VER_LI = [
     ("3.9", "39", "1.12.0"),
     ("3.10", "310", "1.13.0"),
     ("3.11", "311", "1.14.0"),
+    ("3.12", "312", "1.15.0"),
 ]
 
 
 @pytest.mark.parametrize(("python", "env", "target_six_version"), PYTHON_VER_LI)
-def test_proper_version_handle(  # noqa: PLR0913
+def test_proper_version_handle(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
     data_dir: "Path",
@@ -351,7 +368,10 @@ def test_proper_version_handle(  # noqa: PLR0913
     env: str,
     target_six_version: str,
 ) -> None:
-    if not shutil.which(f"python{python}") and os.environ.get("REQUIRE_ALL_TEST", "0") == "0":
+    if (
+        not shutil.which(f"python{python}")
+        and os.environ.get("REQUIRE_ALL_TEST", "0") == "0"
+    ):
         pytest.skip(f"Python {python} is not installed")
     monkeypatch.setenv("MIN_REQ", "1")
     constrains_list = "\n".join(
@@ -362,7 +382,9 @@ def test_proper_version_handle(  # noqa: PLR0913
         {
             "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=""),
             "pyproject.toml": PYPROJECT_TOML_TEMPLATE_BASE.format(deps=constrains_list),
-            "test_file.py": test_file_template_six.format(six_version=target_six_version),
+            "test_file.py": test_file_template_six.format(
+                six_version=target_six_version
+            ),
         },
         base=data_dir / "package_data",
     )
@@ -383,7 +405,9 @@ def test_reset_pip_constrains(
     monkeypatch.setenv("PIP_CONSTRAINT", str(tmp_path / "constraints.txt"))
     project = tox_project(
         {
-            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras="setenv =\n    PIP_CONSTRAINT="),
+            "tox.ini": TOX_INI_TEMPLATE.format(
+                env=env, extras="setenv =\n    PIP_CONSTRAINT="
+            ),
             "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
             "test_file.py": TEST_FILE_TEMPLATE.format(cmp="=="),
         },
