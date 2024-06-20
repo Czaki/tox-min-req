@@ -73,7 +73,13 @@ exclude_lines = [
   "no cov",
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
-  "pragma: no cover"
+  "pragma: no cover",
+]
+
+[tool.coverage.paths]
+source = [
+  "tox_min_req",
+  "tests",
 ]
 
 
