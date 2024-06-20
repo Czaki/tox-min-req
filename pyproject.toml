@@ -78,8 +78,8 @@ exclude_lines = [
 
 [tool.coverage.paths]
 source = [
-  "/Users/runner/work/tox-min-req/tox-min-req/tests",
   "tests",
+  "/Users/runner/work/tox-min-req/tox-min-req/tests",
 ]
 
 
