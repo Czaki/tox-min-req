@@ -62,6 +62,7 @@ branch = true
 parallel = true
 omit = [
   "tox_min_req/__about__.py",
+  "tox_min_req/_version.py",
 ]
 source = [
   "tox_min_req",
