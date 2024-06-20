@@ -47,7 +47,6 @@ Source = "https://github.com/czaki/tox-min-req"
 [project.optional-dependencies]
 testing = [
   "pytest",
-  "pytest-cov",
   "tox[testing]",
 ]
 
@@ -63,6 +62,7 @@ branch = true
 parallel = true
 omit = [
   "tox_min_req/__about__.py",
+  "tox_min_req/_version.py",
 ]
 source = [
   "tox_min_req",
@@ -74,7 +74,13 @@ exclude_lines = [
   "no cov",
   "if __name__ == .__main__.:",
   "if TYPE_CHECKING:",
-  "pragma: no cover"
+  "pragma: no cover",
+]
+
+[tool.coverage.paths]
+source = [
+  "../tox-min-req",
+  "/Users/runner/work/tox-min-req/tox-min-req",
 ]
 
 
