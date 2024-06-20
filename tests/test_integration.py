@@ -228,7 +228,7 @@ def test_additional_constrains(
         for val in [
             "babel==2.6.0",
             "six==1.14.0",
-            pref + " '{project_dir}/constraints_dummy.txt'",
+            pref + " {project_dir}/constraints_dummy.txt",
         ]
     )
 
@@ -270,7 +270,7 @@ def test_additional_constrains_full_path(
         for val in [
             "babel==2.6.0",
             "six==1.14.0",
-            f"{pref} '{tmp_path}/constraints_dummy.txt'",
+            f"{pref} {tmp_path}/constraints_dummy.txt",
         ]
     )
 
