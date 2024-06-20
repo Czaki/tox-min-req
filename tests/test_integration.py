@@ -403,6 +403,7 @@ def test_reset_pip_constrains(
     monkeypatch.setenv("MIN_REQ", "1")
     (tmp_path / "constraints.txt").write_text("six==1.14.0")
     monkeypatch.setenv("PIP_CONSTRAINT", str(tmp_path / "constraints.txt"))
+    monkeypatch.setenv("UV_CONSTRAINT", str(tmp_path / "constraints.txt"))
     project = tox_project(
         {
             "tox.ini": TOX_INI_TEMPLATE.format(
