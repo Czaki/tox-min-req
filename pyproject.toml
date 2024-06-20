@@ -48,6 +48,7 @@ Source = "https://github.com/czaki/tox-min-req"
 testing = [
   "pytest",
   "tox[testing]",
+  "coverage"
 ]
 
 [project.entry-points.tox]
