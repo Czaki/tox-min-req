@@ -18,10 +18,6 @@ jobs:
       matrix:
         platform: [ubuntu-latest]
         python-version: [3.7, 3.8, 3.9, '3.10', '3.11', '3.12']
-        runner: [virtualenv, uv-venv-runner]
-        exclude:
-          - python-version: 3.7
-            runner: uv-venv-runner
 
     steps:
       - uses: actions/checkout@v4
@@ -35,18 +31,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install setuptools tox tox-gh-actions
-      - name: Install tox-uv
-        if: matrix.runner == 'uv-venv-runner' && matrix.python-version != '3.7'
-        run: |
-          python -m pip install tox-uv
       # this runs the platform-specific tests declared in tox.ini
       - name: Test with tox
-        run: python -m tox run --runner ${{ matrix.runner }}
+        run: python -m tox run -e pip
+
+      - name: Test with tox-uv
+        if: matrix.python-version != '3.7'
+        run: python -m tox run -e uv
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
-          name: cov-reports-${{ matrix.platform }}-${{ matrix.python-version }}-${{ matrix.runner }}
+          name: cov-reports-${{ matrix.platform }}-${{ matrix.python-version }}
           path: |
             ./.coverage.*
 
