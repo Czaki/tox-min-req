@@ -168,20 +168,32 @@ def test_min_req_config(
     result.assert_success()
 
 
+@pytest.mark.parametrize(
+    ("runner", "env_var", "module"),
+    [
+        ("virtualenv", "PIP_CONSTRAINT", "tox"),
+        ("uv-venv-runner", "UV_CONSTRAINT", "tox_uv"),
+    ],
+)
 def test_preserve_constrains(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
     data_dir: "Path",
     tmp_path: "Path",
+    runner: str,
+    env_var: str,
+    module: str,
 ) -> None:
+    pytest.importorskip(module)
     monkeypatch.setenv("MIN_REQ", "1")
     (tmp_path / "constraints.txt").write_text("coverage==6.5.0")
     monkeypatch.setenv("PIP_CONSTRAINT", str(tmp_path / "constraints.txt"))
+    monkeypatch.setenv("UV_CONSTRAINT", str(tmp_path / "constraints.txt"))
     env = f"{sys.version_info[0]}{sys.version_info[1]}"
 
     test_file_template = TEST_FILE_TEMPLATE.format(cmp="==")
     test_file_template += 'import coverage\ndef test_click_version():\n    assert coverage.__version__ == "6.5.0"\n'
-    test_file_template += 'import os\ndef test_environ():\n    assert len(os.environ["PIP_CONSTRAINT"].split(" ")) == 2\n'
+    test_file_template += f'import os\ndef test_environ():\n    assert len(os.environ["{env_var}"].split(" ")) == 2\n'
     project = tox_project(
         {
             "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=""),
@@ -192,7 +204,7 @@ def test_preserve_constrains(
         base=data_dir / "package_data",
     )
 
-    result = project.run("run")
+    result = project.run("run", "--runner", runner)
 
     result.assert_success()
 
@@ -216,7 +228,7 @@ def test_additional_constrains(
         for val in [
             "babel==2.6.0",
             "six==1.14.0",
-            pref + " '{project_dir}/constraints_dummy.txt'",
+            pref + " {project_dir}/constraints_dummy.txt",
         ]
     )
 
@@ -258,7 +270,7 @@ def test_additional_constrains_full_path(
         for val in [
             "babel==2.6.0",
             "six==1.14.0",
-            f"{pref} '{tmp_path}/constraints_dummy.txt'",
+            f"{pref} {tmp_path}/constraints_dummy.txt",
         ]
     )
 
@@ -403,7 +415,6 @@ def test_reset_pip_constrains(
     monkeypatch.setenv("MIN_REQ", "1")
     (tmp_path / "constraints.txt").write_text("six==1.14.0")
     monkeypatch.setenv("PIP_CONSTRAINT", str(tmp_path / "constraints.txt"))
-    monkeypatch.setenv("UV_CONSTRAINT", str(tmp_path / "constraints.txt"))
     project = tox_project(
         {
             "tox.ini": TOX_INI_TEMPLATE.format(
