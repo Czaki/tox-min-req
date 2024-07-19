@@ -19,25 +19,24 @@ def test_setup_cfg_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
     constrains = {
         "pytest": "7.0.0",
         "pytest-cov": "2.5",
-        "sphinx": "3.0.0",
         "scipy": "1.2.0",
     }
 
     assert parse_setup_cfg(
-        setup_file, python_version="3.7", python_full_version="3.7.1"
+        setup_file, python_version="3.7", python_full_version="3.7.1", extras=("tests",)
     ) == {
         "numpy": "1.16.0",
         **constrains,
     }
     assert parse_setup_cfg(
-        setup_file, python_version="3.8", python_full_version="3.8.3"
+        setup_file, python_version="3.8", python_full_version="3.8.3", extras=("tests",)
     ) == {
         "numpy": "1.18.0",
         **constrains,
     }
     monkeypatch.setattr("sys.platform", "win32")
     assert parse_setup_cfg(
-        setup_file, python_version="3.8", python_full_version="3.8.3"
+        setup_file, python_version="3.8", python_full_version="3.8.3", extras=("tests",)
     ) == {
         "numpy": "1.18.0",
         "pandas": "0.25.0",
@@ -52,25 +51,33 @@ def test_pyproject_toml_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch
     constrains = {
         "pytest": "7.0.0",
         "pytest-cov": "2.5",
-        "sphinx": "3.0.0",
         "scipy": "1.2.0",
     }
 
     assert parse_pyproject_toml(
-        pyproject_file, python_version="3.7", python_full_version="3.7.1"
+        pyproject_file,
+        python_version="3.7",
+        python_full_version="3.7.1",
+        extras=("tests",),
     ) == {
         "numpy": "1.16.0",
         **constrains,
     }
     assert parse_pyproject_toml(
-        pyproject_file, python_version="3.8", python_full_version="3.8.3"
+        pyproject_file,
+        python_version="3.8",
+        python_full_version="3.8.3",
+        extras=("tests",),
     ) == {
         "numpy": "1.18.0",
         **constrains,
     }
     monkeypatch.setattr("sys.platform", "win32")
     assert parse_pyproject_toml(
-        pyproject_file, python_version="3.8", python_full_version="3.8.3"
+        pyproject_file,
+        python_version="3.8",
+        python_full_version="3.8.3",
+        extras=("tests",),
     ) == {
         "numpy": "1.18.0",
         "pandas": "0.25.0",
