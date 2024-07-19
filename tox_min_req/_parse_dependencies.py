@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Sequence
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -65,7 +66,10 @@ def _parse_setup_cfg_section(
 
 
 def parse_setup_cfg(
-    path: str | Path, python_version: str, python_full_version: str
+    path: str | Path,
+    python_version: str,
+    python_full_version: str,
+    extras: Sequence[str] = (),
 ) -> dict[str, str]:
     """
     Parse the setup.cfg file and return a dict of the dependencies and their lower version constraints.
@@ -83,6 +87,8 @@ def parse_setup_cfg(
         python_full_version,
     )
     for extra in config["options.extras_require"]:
+        if extra not in extras:
+            continue
         base_constrains.update(
             _parse_setup_cfg_section(
                 config["options.extras_require"][extra],
@@ -95,7 +101,10 @@ def parse_setup_cfg(
 
 
 def parse_pyproject_toml(
-    path: str | Path, python_version: str, python_full_version: str
+    path: str | Path,
+    python_version: str,
+    python_full_version: str,
+    extras: Sequence[str] = (),
 ) -> dict[str, str]:
     """
     Parse the pyproject.toml file and return a dict of the dependencies and their lower version constraints.
@@ -113,6 +122,8 @@ def parse_pyproject_toml(
             parse_single_requirement(line, python_version, python_full_version)
         )
     for extra in data["project"]["optional-dependencies"]:
+        if extra not in extras:
+            continue
         for line in data["project"]["optional-dependencies"][extra]:
             base_constrains.update(
                 parse_single_requirement(line, python_version, python_full_version)
