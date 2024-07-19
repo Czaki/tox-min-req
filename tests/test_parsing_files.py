@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from tox_min_req._parse_dependencies import (
@@ -12,7 +14,7 @@ if TYPE_CHECKING:
     import pytest
 
 
-def test_setup_cfg_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
+def test_setup_cfg_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("sys.platform", "linux")
     setup_file = data_dir / "setup.cfg"
 
@@ -44,7 +46,7 @@ def test_setup_cfg_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
     }
 
 
-def test_pyproject_toml_parse(data_dir: "Path", monkeypatch: "pytest.MonkeyPatch"):
+def test_pyproject_toml_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("sys.platform", "linux")
     pyproject_file = data_dir / "pyproject.toml"
 
