@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9, '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
 
     steps:
       - uses: actions/checkout@v4
@@ -30,14 +30,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install setuptools tox
+          python -m pip install setuptools tox tox-uv
       # this runs the platform-specific tests declared in tox.ini
       - name: Test with tox
-        run: python -m tox run -e pip
-
-      - name: Test with tox-uv
-        if: matrix.python-version != '3.7'
-        run: python -m tox run -e uv
+        run: python -m tox run
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
