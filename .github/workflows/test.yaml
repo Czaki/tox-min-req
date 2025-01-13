@@ -30,10 +30,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install setuptools tox tox-uv
+          python -m pip install setuptools tox
       # this runs the platform-specific tests declared in tox.ini
       - name: Test with tox
-        run: python -m tox run
+        run: python -m tox run -e pip
+
+      - name: Test with tox-uv
+        run: python -m tox run -e uv
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
