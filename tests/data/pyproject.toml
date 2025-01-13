@@ -11,6 +11,9 @@ dependencies = [
 [project.optional-dependencies]
 tests = [
     "pytest>=7.0.0",
+    "sample_package_name[test2]",
+    ]
+test2 = [
     "pytest-cov>=2.5",
     ]
 docs = ["sphinx>=3.0.0"]
