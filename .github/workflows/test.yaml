@@ -45,6 +45,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cov-reports-${{ matrix.platform }}-${{ matrix.python-version }}
+          include-hidden-files: true
           path: |
             ./.coverage.*
 
