@@ -38,9 +38,6 @@ jobs:
       - name: Test with tox-uv
         run: python -m tox run -e uv
 
-      - name: debug ls
-        run: ls -la
-
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
