@@ -17,7 +17,7 @@ jobs:
     strategy:
       matrix:
         platform: [ubuntu-latest]
-        python-version: [3.7, 3.8, 3.9, '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
 
     steps:
       - uses: actions/checkout@v4
@@ -36,13 +36,13 @@ jobs:
         run: python -m tox run -e pip
 
       - name: Test with tox-uv
-        if: matrix.python-version != '3.7'
         run: python -m tox run -e uv
 
       - name: Upload coverage data
         uses: actions/upload-artifact@v4
         with:
           name: cov-reports-${{ matrix.platform }}-${{ matrix.python-version }}
+          include-hidden-files: true
           path: |
             ./.coverage.*
 

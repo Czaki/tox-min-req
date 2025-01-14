@@ -19,12 +19,12 @@ authors = [
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: Implementation :: CPython",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
@@ -47,7 +47,7 @@ Source = "https://github.com/czaki/tox-min-req"
 [project.optional-dependencies]
 testing = [
   "pytest",
-  "tox[testing]",
+  "tox[test]",
   "coverage"
 ]
 

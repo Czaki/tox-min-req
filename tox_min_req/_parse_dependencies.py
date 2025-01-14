@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import queue
 import re
 import sys
+import warnings
 from collections.abc import Sequence
 from configparser import ConfigParser
 from pathlib import Path
@@ -100,6 +102,51 @@ def parse_setup_cfg(
     return base_constrains
 
 
+def get_extras_from_dependency(dependency: str) -> Sequence[str]:
+    """
+    Get extras from the dependency string.
+
+    :param dependency: dependency string
+    :return: list of extras
+    """
+    return [x.strip() for x in dependency.split("[")[1].split("]")[0].split(",")]
+
+
+def get_all_extras_to_visit(
+    optional_dependencies: dict[str, str],
+    start_extras: Sequence[str],
+    project_name: str,
+) -> set[str]:
+    """
+    Get all extras that should be visited.
+
+    :param optional_dependencies: dict of the optional dependencies
+    :param start_extras: list of extras to start with
+    :param project_name: name of the project to search for nested extras
+    :return: set of extras that should be visited
+    """
+    visited_extras = set()
+    extras_to_visit: queue.Queue[str] = queue.Queue()
+    prefix = f"{project_name}["
+    for extra in start_extras:
+        extras_to_visit.put(extra)
+    while not extras_to_visit.empty():
+        extra = extras_to_visit.get()
+        if extra in visited_extras:
+            continue
+        if extra not in optional_dependencies:
+            warnings.warn(f"Extra {extra} not found in pyproject.toml", UserWarning)
+            continue
+        visited_extras.add(extra)
+        for line in optional_dependencies[extra]:
+            if not line.startswith(prefix):
+                continue
+            extras = get_extras_from_dependency(line)
+            for extra in extras:
+                extras_to_visit.put(extra)
+    return visited_extras
+
+
 def parse_pyproject_toml(
     path: str | Path,
     python_version: str,
@@ -112,6 +159,7 @@ def parse_pyproject_toml(
     :param path: path to pyproject.toml file
     :param python_version: major.minor version of python
     :param python_full_version: major.minor.patch version of python
+    :param extras: list of extras to include
     :return: dict of the dependencies that fit to environment and their lower version constraints
     """
     with Path(path).open() as f:
@@ -121,9 +169,14 @@ def parse_pyproject_toml(
         base_constrains.update(
             parse_single_requirement(line, python_version, python_full_version)
         )
-    for extra in data["project"]["optional-dependencies"]:
-        if extra not in extras:
-            continue
+    project_name = data["project"]["name"]
+    extras_to_visit = get_all_extras_to_visit(
+        data["project"]["optional-dependencies"],
+        extras,
+        project_name,
+    )
+
+    for extra in extras_to_visit:
         for line in data["project"]["optional-dependencies"][extra]:
             base_constrains.update(
                 parse_single_requirement(line, python_version, python_full_version)
