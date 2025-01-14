@@ -428,3 +428,26 @@ def test_reset_pip_constrains(
 
     result = project.run("run")
     result.assert_success()
+
+
+def test_warning_wrong_extras(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    tmp_path: "Path",
+) -> None:
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    monkeypatch.setenv("MIN_REQ", "1")
+    project = tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras="").replace(
+                "extras = test", "extras = test8"
+            ),
+            "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
+            "test_file.py": "def test_dummy(): pass",
+        },
+        base=data_dir / "package_data",
+    )
+    with pytest.warns(UserWarning, match="Extra test8"):
+        result = project.run("run")
+    result.assert_success()

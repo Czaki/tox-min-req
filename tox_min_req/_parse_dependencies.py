@@ -135,7 +135,7 @@ def get_all_extras_to_visit(
         if extra in visited_extras:
             continue
         if extra not in optional_dependencies:
-            warnings.warn(f"Extra {extra} not found in pyproject.toml")
+            warnings.warn(f"Extra {extra} not found in pyproject.toml", UserWarning)
             continue
         visited_extras.add(extra)
         for line in optional_dependencies[extra]:
