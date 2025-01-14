@@ -440,7 +440,7 @@ def test_warning_wrong_extras(
     monkeypatch.setenv("MIN_REQ", "1")
     project = tox_project(
         {
-            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras="").replace(
+            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras="deps = pytest").replace(
                 "extras = test", "extras = test8"
             ),
             "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
