@@ -24,6 +24,10 @@ commands = pytest test_file.py
 {extras}
 """
 
+TOX_INI_TEMPLATE_GROUPS = TOX_INI_TEMPLATE.replace(
+    "extras = test", "dependency_groups = test"
+)
+
 SETUP_CFG_TEMPLATE = """
 [metadata]
 name = test_package
@@ -63,6 +67,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = [
+    "pytest>=7.1.0",
+]
+
+[dependency-groups]
 test = [
     "pytest>=7.1.0",
 ]
@@ -137,6 +146,30 @@ def test_pyproject_toml_parse(
     project = tox_project(
         {
             "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=""),
+            "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
+            "test_file.py": TEST_FILE_TEMPLATE.format(cmp=cmp),
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+
+    result.assert_success()
+
+
+@pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
+def test_pyproject_toml_parse_dependency_groups(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    cmp: str,
+    req: str,
+) -> None:
+    monkeypatch.setenv("MIN_REQ", req)
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    project = tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE_GROUPS.format(env=env, extras=""),
             "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
             "test_file.py": TEST_FILE_TEMPLATE.format(cmp=cmp),
         },

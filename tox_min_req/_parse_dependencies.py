@@ -37,6 +37,8 @@ def parse_single_requirement(
     :param python_full_version: major.minor.patch version of python
     :return: empty dict if the requirement is not valid or the requirement name and version
     """
+    if line.startswith("{include") or line.startswith("-r") or line.startswith("-c"):
+        return {}
     req = Requirement(line.split("#", maxsplit=1)[0])
     if req.marker is not None and not req.marker.evaluate(
         {
@@ -152,11 +154,52 @@ def get_all_extras_to_visit(
     return visited_extras
 
 
+def get_all_dependency_groups_to_visit(
+    dependency_groups: dict[str, list[str]],
+    start_dependency_groups: Sequence[str],
+    project_name: str,
+) -> tuple[set[str], set[str]]:
+    """
+    Get all dependency groups that should be visited.
+
+    :param dependency_groups: dict of the dependency groups
+    :param start_dependency_groups: list of dependency groups to start with
+    :return: set of dependency groups that should be visited and set of required extras
+    """
+    visited_dependency_groups = set()
+    required_extras: set[str] = set()
+    dependency_groups_to_visit: queue.Queue[str] = queue.Queue()
+    prefix = f"{project_name}["
+    for group in start_dependency_groups:
+        dependency_groups_to_visit.put(group)
+    while not dependency_groups_to_visit.empty():
+        group = dependency_groups_to_visit.get()
+        if group in visited_dependency_groups:
+            continue
+        if group not in dependency_groups:
+            warnings.warn(
+                f"Dependency group {group} not found in pyproject.toml", UserWarning
+            )
+            continue
+        visited_dependency_groups.add(group)
+        for line in dependency_groups[group]:
+            if line.startswith(prefix):
+                extras = get_extras_from_dependency(line)
+                required_extras.update(extras)
+            if line.startswith("{include-group"):
+                nested_group = (
+                    line.split("=", maxsplit=1)[1].split("}", maxsplit=1)[0].strip()
+                )
+                dependency_groups_to_visit.put(nested_group)
+    return visited_dependency_groups, required_extras
+
+
 def parse_pyproject_toml(
     path: str | Path,
     python_version: str,
     python_full_version: str,
     extras: Sequence[str] = (),
+    dependency_groups: Sequence[str] = (),
 ) -> dict[str, str]:
     """
     Parse the pyproject.toml file and return a dict of the dependencies and their lower version constraints.
@@ -165,6 +208,7 @@ def parse_pyproject_toml(
     :param python_version: major.minor version of python
     :param python_full_version: major.minor.patch version of python
     :param extras: list of extras to include
+    :param dependency_groups: list of dependency groups to include
     :return: dict of the dependencies that fit to environment and their lower version constraints
     """
     with Path(path).open() as f:
@@ -181,8 +225,19 @@ def parse_pyproject_toml(
         project_name,
     )
 
-    for extra in extras_to_visit:
+    dependency_groups_to_visit, additional_extras = get_all_dependency_groups_to_visit(
+        data["dependency-groups"],
+        dependency_groups,
+        project_name,
+    )
+
+    for extra in extras_to_visit | additional_extras:
         for line in data["project"]["optional-dependencies"][extra]:
+            base_constrains.update(
+                parse_single_requirement(line, python_version, python_full_version)
+            )
+    for group in dependency_groups_to_visit:
+        for line in data["dependency-groups"][group]:
             base_constrains.update(
                 parse_single_requirement(line, python_version, python_full_version)
             )
