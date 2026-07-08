@@ -20,8 +20,8 @@ else:
 version_constrains = re.compile(r"([a-zA-Z0-9_\-]+)([><=!]+)([0-9\.]+)")
 
 __all__ = (
-    "parse_setup_cfg",
     "parse_pyproject_toml",
+    "parse_setup_cfg",
     "parse_single_requirement",
 )
 
@@ -109,7 +109,12 @@ def get_extras_from_dependency(dependency: str) -> Sequence[str]:
     :param dependency: dependency string
     :return: list of extras
     """
-    return [x.strip() for x in dependency.split("[")[1].split("]")[0].split(",")]
+    return [
+        x.strip()
+        for x in dependency.split("[", maxsplit=2)[1]
+        .split("]", maxsplit=1)[0]
+        .split(",")
+    ]
 
 
 def get_all_extras_to_visit(

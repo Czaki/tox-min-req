@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 name = "tox-min-req"
 description = 'Tox plugin to run tests with minimal requirements base on setup.cfg or pyproject.toml'
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {text = "MIT"}
 keywords = []
 authors = [
@@ -47,9 +47,22 @@ Source = "https://github.com/czaki/tox-min-req"
 [project.optional-dependencies]
 testing = [
   "pytest",
-  "tox[test]",
+  "tox[testing,test]",
+  "coverage",
+  "devpi-process>=1.0.2 ; python_version=='3.9'",
+  "pytest-mock>=3.14.1 ; python_version=='3.9'",
+]
+
+[dependency-groups]
+testing = [
+  "pytest",
+  "tox[testing]",
   "coverage"
 ]
+dev = [
+  {include-group = "testing"},
+]
+
 
 [project.entry-points.tox]
 min-req = "tox_min_req._tox_plugin"
