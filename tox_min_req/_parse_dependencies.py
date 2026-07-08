@@ -219,17 +219,26 @@ def parse_pyproject_toml(
             parse_single_requirement(line, python_version, python_full_version)
         )
     project_name = data["project"]["name"]
-    extras_to_visit = get_all_extras_to_visit(
-        data["project"]["optional-dependencies"],
-        extras,
-        project_name,
-    )
+    if extras:
+        extras_to_visit = get_all_extras_to_visit(
+            data["project"]["optional-dependencies"],
+            extras,
+            project_name,
+        )
+    else:
+        extras_to_visit = set()
 
-    dependency_groups_to_visit, additional_extras = get_all_dependency_groups_to_visit(
-        data["dependency-groups"],
-        dependency_groups,
-        project_name,
-    )
+    if dependency_groups:
+        dependency_groups_to_visit, additional_extras = (
+            get_all_dependency_groups_to_visit(
+                data["dependency-groups"],
+                dependency_groups,
+                project_name,
+            )
+        )
+    else:
+        dependency_groups_to_visit = set()
+        additional_extras = set()
 
     for extra in extras_to_visit | additional_extras:
         for line in data["project"]["optional-dependencies"][extra]:
