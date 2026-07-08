@@ -110,7 +110,10 @@ def get_extras_from_dependency(dependency: str) -> Sequence[str]:
     :return: list of extras
     """
     return [
-        x.strip() for x in dependency.split("[")[1].split("]", maxsplit=1)[0].split(",")
+        x.strip()
+        for x in dependency.split("[", maxsplit=2)[1]
+        .split("]", maxsplit=1)[0]
+        .split(",")
     ]
 
 
