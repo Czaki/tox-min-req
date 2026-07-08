@@ -37,7 +37,7 @@ def parse_single_requirement(
     :param python_full_version: major.minor.patch version of python
     :return: empty dict if the requirement is not valid or the requirement name and version
     """
-    if line.startswith("{include") or line.startswith("-r") or line.startswith("-c"):
+    if isinstance(line, dict):
         return {}
     req = Requirement(line.split("#", maxsplit=1)[0])
     if req.marker is not None and not req.marker.evaluate(
@@ -183,14 +183,12 @@ def get_all_dependency_groups_to_visit(
             continue
         visited_dependency_groups.add(group)
         for line in dependency_groups[group]:
-            if line.startswith(prefix):
+            if isinstance(line, dict):
+                dependency_groups_to_visit.put(line["include-group"])
+            elif line.startswith(prefix):
                 extras = get_extras_from_dependency(line)
                 required_extras.update(extras)
-            if line.startswith("{include-group"):
-                nested_group = (
-                    line.split("=", maxsplit=1)[1].split("}", maxsplit=1)[0].strip()
-                )
-                dependency_groups_to_visit.put(nested_group)
+
     return visited_dependency_groups, required_extras
 
 

@@ -20,3 +20,14 @@ test3 = [
     "sample_package_name[test2]",
     ]
 docs = ["sphinx>=3.0.0"]
+
+
+[dependency-groups]
+tests = [
+    "pytest>=7.0.0",
+    "sample_package_name[test2]",
+    ]
+test2 = [
+    "pytest-mock",
+    {include-group = "tests"},
+]
