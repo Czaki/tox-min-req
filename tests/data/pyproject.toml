@@ -28,6 +28,10 @@ tests = [
     "sample_package_name[test2]",
     ]
 test2 = [
-    "pytest-mock",
+    "pytest-mock>=3.0.0",
+    {include-group = "tests"},
+]
+test3 = [
+    "pytest-xdist>=3.0.0",
     {include-group = "tests"},
 ]

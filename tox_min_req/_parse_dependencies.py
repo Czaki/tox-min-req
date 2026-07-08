@@ -141,7 +141,7 @@ def get_all_extras_to_visit(
         extra = extras_to_visit.get()
         if extra in visited_extras:
             continue
-        if extra not in optional_dependencies:
+        if extra not in optional_dependencies:  # pragma: no cover
             warnings.warn(f"Extra {extra} not found in pyproject.toml", UserWarning)
             continue
         visited_extras.add(extra)
@@ -176,7 +176,7 @@ def get_all_dependency_groups_to_visit(
         group = dependency_groups_to_visit.get()
         if group in visited_dependency_groups:
             continue
-        if group not in dependency_groups:
+        if group not in dependency_groups:  # pragma: no cover
             warnings.warn(
                 f"Dependency group {group} not found in pyproject.toml", UserWarning
             )

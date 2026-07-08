@@ -97,13 +97,15 @@ def test_pyproject_toml_parse_dependencies_groups(
         "pytest": "7.0.0",
         "pytest-cov": "2.5",
         "scipy": "1.2.0",
+        "pytest-mock": "3.0.0",
+        "pytest-xdist": "3.0.0",
     }
 
     assert parse_pyproject_toml(
         pyproject_file,
         python_version="3.7",
         python_full_version="3.7.1",
-        dependency_groups=("test2",),
+        dependency_groups=("test2", "test3"),
     ) == {
         "numpy": "1.16.0",
         **constrains,
