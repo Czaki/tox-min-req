@@ -49,7 +49,7 @@ testing = [
   "pytest",
   "tox[testing,test]",
   "coverage",
-  "devpi-process>=1.1.1 ; python_version=='3.9'",
+  "devpi-process>=1.0.2 ; python_version=='3.9'",
 ]
 
 [dependency-groups]
