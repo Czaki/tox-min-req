@@ -10,6 +10,10 @@ on:
       - '**'
   workflow_dispatch:
 
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: ${{ matrix.platform }} py${{ matrix.python-version }} ${{ matrix.runner }}
