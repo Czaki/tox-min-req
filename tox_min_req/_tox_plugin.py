@@ -66,13 +66,18 @@ def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) 
     python_version = ".".join(str(x) for x in tox_env.base_python.version_info[:2])
     python_full_version = ".".join(str(x) for x in tox_env.base_python.version_info[:3])
     extras = tox_env.conf["extras"]
+    dependency_groups = tox_env.conf["dependency_groups"]
     if (project_path / "setup.cfg").exists():
         dependencies = parse_setup_cfg(
             project_path / "setup.cfg", python_version, python_full_version, extras
         )
     elif (project_path / "pyproject.toml").exists():
         dependencies = parse_pyproject_toml(
-            project_path / "pyproject.toml", python_version, python_full_version, extras
+            project_path / "pyproject.toml",
+            python_version,
+            python_full_version,
+            extras,
+            dependency_groups,
         )
     else:  # pragma: no cover
         return

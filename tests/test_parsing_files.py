@@ -87,6 +87,31 @@ def test_pyproject_toml_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
     }
 
 
+def test_pyproject_toml_parse_dependencies_groups(
+    data_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr("sys.platform", "linux")
+    pyproject_file = data_dir / "pyproject.toml"
+
+    constrains = {
+        "pytest": "7.0.0",
+        "pytest-cov": "2.5",
+        "scipy": "1.2.0",
+        "pytest-mock": "3.0.0",
+        "pytest-xdist": "3.0.0",
+    }
+
+    assert parse_pyproject_toml(
+        pyproject_file,
+        python_version="3.7",
+        python_full_version="3.7.1",
+        dependency_groups=("test2", "test3"),
+    ) == {
+        "numpy": "1.16.0",
+        **constrains,
+    }
+
+
 def test_parse_single_requirement():
     p_ver, py_full_ver = "3.10", "3.10.1"
     assert parse_single_requirement("numpy==1.16.0", p_ver, py_full_ver) == {
