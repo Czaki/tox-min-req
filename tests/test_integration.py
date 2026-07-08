@@ -2,7 +2,9 @@ import os
 import shutil
 import sys
 from typing import TYPE_CHECKING
+from importlib.metadata import version
 
+from packaging.version import parse as parse_version
 import pytest
 from tox.pytest import ToxProjectCreator, init_fixture  # noqa: F401
 
@@ -430,6 +432,10 @@ def test_reset_pip_constrains(
     result.assert_success()
 
 
+@pytest.mark.skipif(
+    parse_version(version("tox")) >= parse_version("4.36.0"),
+    reason="Since tox 4.36.0, tox raises an error instead of warning for wrong extras",
+)
 def test_warning_wrong_extras(
     tox_project: ToxProjectCreator,
     monkeypatch: pytest.MonkeyPatch,
