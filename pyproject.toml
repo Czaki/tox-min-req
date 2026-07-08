@@ -50,6 +50,7 @@ testing = [
   "tox[testing,test]",
   "coverage",
   "devpi-process>=1.0.2 ; python_version=='3.9'",
+  "pytest-mock>=3.14.1 ; python_version=='3.9'",
 ]
 
 [dependency-groups]
