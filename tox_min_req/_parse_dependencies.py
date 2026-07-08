@@ -184,7 +184,12 @@ def get_all_dependency_groups_to_visit(
         visited_dependency_groups.add(group)
         for line in dependency_groups[group]:
             if isinstance(line, dict):
-                dependency_groups_to_visit.put(line["include-group"])
+                if "include-group" in line:
+                    dependency_groups_to_visit.put(line["include-group"])
+                else:  # pragma: no cover
+                    warnings.warn(
+                        f"Invalid line format in dependency group {group}: {line}"
+                    )
             elif line.startswith(prefix):
                 extras = get_extras_from_dependency(line)
                 required_extras.update(extras)
