@@ -1,11 +1,11 @@
 import os
 import shutil
 import sys
-from typing import TYPE_CHECKING
 from importlib.metadata import version
+from typing import TYPE_CHECKING
 
-from packaging.version import parse as parse_version
 import pytest
+from packaging.version import parse as parse_version
 from tox.pytest import ToxProjectCreator, init_fixture  # noqa: F401
 
 from tox_min_req._tox_plugin import CONSTRAINTS_FILE_NAME
