@@ -48,7 +48,8 @@ Source = "https://github.com/czaki/tox-min-req"
 testing = [
   "pytest",
   "tox[testing,test]",
-  "coverage"
+  "coverage",
+  "devpi-process>=1.1.1 ; python_version=='3.9'",
 ]
 
 [dependency-groups]
