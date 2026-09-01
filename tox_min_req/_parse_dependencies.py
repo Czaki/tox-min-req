@@ -27,7 +27,7 @@ __all__ = (
 
 
 def parse_single_requirement(
-    line: str, python_version: str, python_full_version: str
+    line: str | dict, python_version: str, python_full_version: str
 ) -> dict[str, str]:
     """
     Parse a single requirement line. It resolves requirement against the current system and the provided python version.
@@ -81,6 +81,7 @@ def parse_setup_cfg(
     :param path: path to setup.cfg file
     :param python_version: major.minor version of python
     :param python_full_version: major.minor.patch version of python
+    :param extras: list of extras to include
     :return: dict of the dependencies that fit to environment and their lower version constraints
     """
     config = ConfigParser()
