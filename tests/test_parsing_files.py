@@ -27,8 +27,20 @@ def mock_sys_win32(monkeypatch: pytest.MonkeyPatch):
     )
 
 
-def test_setup_cfg_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("sys.platform", "linux")
+@pytest.fixture
+def mock_sys_linux(monkeypatch: pytest.MonkeyPatch):
+    def new_default_environment():
+        env = default_environment()
+        env["sys_platform"] = "linux"
+        return env
+
+    monkeypatch.setattr(
+        "packaging.markers.default_environment", new_default_environment
+    )
+
+
+@pytest.mark.usefixtures("mock_sys_linux")
+def test_setup_cfg_parse(data_dir: Path):
     setup_file = data_dir / "setup.cfg"
 
     constrains = {
@@ -70,8 +82,8 @@ def test_setup_cfg_parse_win32(data_dir: Path):
     }
 
 
-def test_pyproject_toml_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("sys.platform", "linux")
+@pytest.mark.usefixtures("mock_sys_linux")
+def test_pyproject_toml_parse(data_dir: Path):
     pyproject_file = data_dir / "pyproject.toml"
 
     constrains = {
