@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+from packaging.markers import default_environment
+
 from tox_min_req._parse_dependencies import (
     parse_pyproject_toml,
     parse_setup_cfg,
@@ -11,11 +14,33 @@ from tox_min_req._parse_dependencies import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import pytest
+
+@pytest.fixture
+def mock_sys_win32(monkeypatch: pytest.MonkeyPatch):
+    def new_default_environment():
+        env = default_environment()
+        env["sys_platform"] = "win32"
+        return env
+
+    monkeypatch.setattr(
+        "packaging.markers.default_environment", new_default_environment
+    )
 
 
-def test_setup_cfg_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("sys.platform", "linux")
+@pytest.fixture
+def mock_sys_linux(monkeypatch: pytest.MonkeyPatch):
+    def new_default_environment():
+        env = default_environment()
+        env["sys_platform"] = "linux"
+        return env
+
+    monkeypatch.setattr(
+        "packaging.markers.default_environment", new_default_environment
+    )
+
+
+@pytest.mark.usefixtures("mock_sys_linux")
+def test_setup_cfg_parse(data_dir: Path):
     setup_file = data_dir / "setup.cfg"
 
     constrains = {
@@ -36,7 +61,18 @@ def test_setup_cfg_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
         "numpy": "1.18.0",
         **constrains,
     }
-    monkeypatch.setattr("sys.platform", "win32")
+
+
+@pytest.mark.usefixtures("mock_sys_win32")
+def test_setup_cfg_parse_win32(data_dir: Path):
+    setup_file = data_dir / "setup.cfg"
+
+    constrains = {
+        "pytest": "7.0.0",
+        "pytest-cov": "2.5",
+        "scipy": "1.2.0",
+    }
+
     assert parse_setup_cfg(
         setup_file, python_version="3.8", python_full_version="3.8.3", extras=("tests",)
     ) == {
@@ -46,8 +82,8 @@ def test_setup_cfg_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
     }
 
 
-def test_pyproject_toml_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr("sys.platform", "linux")
+@pytest.mark.usefixtures("mock_sys_linux")
+def test_pyproject_toml_parse(data_dir: Path):
     pyproject_file = data_dir / "pyproject.toml"
 
     constrains = {
@@ -74,7 +110,18 @@ def test_pyproject_toml_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
         "numpy": "1.18.0",
         **constrains,
     }
-    monkeypatch.setattr("sys.platform", "win32")
+
+
+@pytest.mark.usefixtures("mock_sys_win32")
+def test_pyproject_toml_parse_win32(data_dir: Path):
+    pyproject_file = data_dir / "pyproject.toml"
+
+    constrains = {
+        "pytest": "7.0.0",
+        "pytest-cov": "2.5",
+        "scipy": "1.2.0",
+    }
+
     assert parse_pyproject_toml(
         pyproject_file,
         python_version="3.8",
@@ -87,10 +134,8 @@ def test_pyproject_toml_parse(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
     }
 
 
-def test_pyproject_toml_parse_dependencies_groups(
-    data_dir: Path, monkeypatch: pytest.MonkeyPatch
-):
-    monkeypatch.setattr("sys.platform", "linux")
+@pytest.mark.usefixtures("mock_sys_linux")
+def test_pyproject_toml_parse_dependencies_groups(data_dir: Path):
     pyproject_file = data_dir / "pyproject.toml"
 
     constrains = {
