@@ -134,10 +134,8 @@ def test_pyproject_toml_parse_win32(data_dir: Path):
     }
 
 
-def test_pyproject_toml_parse_dependencies_groups(
-    data_dir: Path, monkeypatch: pytest.MonkeyPatch
-):
-    monkeypatch.setattr("sys.platform", "linux")
+@pytest.mark.usefixtures("mock_sys_linux")
+def test_pyproject_toml_parse_dependencies_groups(data_dir: Path):
     pyproject_file = data_dir / "pyproject.toml"
 
     constrains = {
