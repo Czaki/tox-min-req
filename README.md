@@ -52,7 +52,7 @@ pip install tox-min-req
 The basic usage is to set the `MIN_REQ` environment variable to `1`
 
 ```bash
-$ MIN_REQ=1 tox -e py37
+$ MIN_REQ=1 tox -e py310
 ```
 
 ## Configuration options
@@ -99,11 +99,11 @@ In such a scenatio, one needs to set the `TOX_MIN_REQ_CONSTRAINTS` environment v
 to the path where constraints file can be written.
 
 ```bash
-$ TOX_MIN_REQ_CONSTRAINTS=/tmp MIN_REQ=1 tox -e py37
+$ TOX_MIN_REQ_CONSTRAINTS=/tmp MIN_REQ=1 tox -e py310
 ```
 
 It is also possible to use the `--min-req-constraints-path` command line option to set the path to the constraints file.
 
 ```bash
-$ tox --min-req-constraints-path=/tmp -e py37
+$ tox --min-req-constraints-path=/tmp -e py310
 ``` 

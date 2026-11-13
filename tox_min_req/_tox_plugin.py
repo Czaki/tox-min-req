@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from tox.plugin import impl
+from tox.tox_env.python.runner import PythonRun
 
 from ._parse_dependencies import (
     parse_pyproject_toml,
@@ -52,12 +55,59 @@ def _write_constrains_file(
     else:
         tox_env.environment_variables["UV_CONSTRAINT"] = str(constrain_file)
 
+    _add_to_tox_constraints(tox_env, constrain_file)
+
     return constrain_file
+
+
+def _add_to_tox_constraints(tox_env: ToxEnv, constrain_file: Path) -> None:
+    """
+    Pass the constraints file through the tox ``constraints`` setting too.
+
+    When the ``constraints`` setting (tox>=4.28) is used, tox passes it to the
+    installer as ``-c`` arguments. uv then ignores ``UV_CONSTRAINT``, so the
+    minimum versions have to be passed the same way.
+    """
+    if "constraints" not in tox_env.conf:
+        return
+    constraints = tox_env.conf["constraints"]
+    args = list(constraints.as_root_args)
+    if not args:
+        return
+    files = [value for option, value in zip(args[::2], args[1::2]) if option == "-c"]
+    names = [*files, str(constrain_file)]
+    # tox splits each entry with ``shlex.split(..., posix=sys.platform != "win32")``.
+    # On POSIX quotes are removed, so quoting keeps paths with spaces in one piece.
+    # On Windows quotes are kept as part of the file name, so paths cannot be quoted
+    # and paths with spaces cannot be passed.
+    posix = sys.platform != "win32"
+    definition = next(
+        (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
+    )
+    if (
+        len(files) * 2 != len(args)
+        # ``overwrite`` was added in tox 4.58.0
+        or not hasattr(definition, "overwrite")
+        or (not posix and any(" " in name for name in names))
+    ):
+        logging.warning(
+            "tox-min-req: cannot add %s to the tox 'constraints' setting, "
+            "uv may install versions newer than the minimum ones",
+            constrain_file,
+        )
+        return
+    raw = "\n".join(f'"{name}"' if posix else name for name in names)
+    definition.overwrite(  # type: ignore[union-attr]
+        type(constraints).factory(tox_env.core["toxinidir"], raw)
+    )
 
 
 @impl
 def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) -> None:
-    if of_type != "deps" or section != "PythonRun":
+    # Do not check ``section``: tox passes ``PythonRun`` but runners from
+    # plugins (e.g. tox-uv's ``UvVenvRunner``) may pass their own class name.
+    # Other run envs (e.g. PEP 723 runners) do not register ``extras``.
+    if of_type != "deps" or not isinstance(tox_env, PythonRun):
         return
     if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
         return

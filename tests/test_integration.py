@@ -1,7 +1,7 @@
 import os
 import shutil
 import sys
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING
 
 import pytest
@@ -42,7 +42,7 @@ install_requires =
 
 [options.extras_require]
 test =
-    pytest>=7.1.0
+    pytest>=8.3.0
     coverage
 """
 
@@ -68,12 +68,12 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest>=7.1.0",
+    "pytest>=8.3.0",
 ]
 
 [dependency-groups]
 test = [
-    "pytest>=7.1.0",
+    "pytest>=8.3.0",
 ]
 """
 
@@ -90,7 +90,7 @@ import click
 import sample_package
 
 def test_pytest_version():
-    assert pytest.__version__ {cmp} "7.1.0"
+    assert pytest.__version__ {cmp} "8.3.0"
 
 def test_six_version():
     assert six.__version__ {cmp} "1.13.0"
@@ -386,7 +386,7 @@ import six
 import sample_package
 
 def test_pytest_version():
-    assert pytest.__version__ == "7.1.0"
+    assert pytest.__version__ == "8.3.0"
 
 def test_six_version():
     assert six.__version__ == "{six_version}"
@@ -397,12 +397,14 @@ def test_sample_package():
 
 
 PYTHON_VER_LI = [
-    ("3.7", "37", "1.10.0"),
     ("3.8", "38", "1.11.0"),
     ("3.9", "39", "1.12.0"),
     ("3.10", "310", "1.13.0"),
     ("3.11", "311", "1.14.0"),
     ("3.12", "312", "1.15.0"),
+    ("3.13", "313", "1.16.0"),
+    ("3.14", "314", "1.17.0"),
+    ("3.15", "315", "1.12.0"),
 ]
 
 
@@ -489,4 +491,111 @@ def test_warning_wrong_extras(
     )
     with pytest.warns(UserWarning, match="Extra test8"):
         result = project.run("run")
+    result.assert_success()
+
+
+PEP723_SCRIPT = """\
+# /// script
+# dependencies = ["six>=1.13.0"]
+# ///
+import six
+
+print(six.__version__)
+"""
+
+
+def _installed_version(*dists: str) -> "str | None":
+    """Return the version of the first installed distribution from ``dists``."""
+    for dist in dists:
+        try:
+            return version(dist)
+        except PackageNotFoundError:
+            continue
+    return None
+
+
+@pytest.mark.parametrize(
+    ("runner", "dists", "min_version"),
+    [
+        ("virtualenv-pep-723", ("tox",), "4.52.0"),
+        # since the split, the tox-uv code ships in tox-uv-bare (same version)
+        ("uv-venv-pep-723", ("tox-uv-bare", "tox-uv"), "1.34.0"),
+    ],
+)
+def test_pep723_runner_ignored(
+    tox_project: ToxProjectCreator,
+    data_dir: "Path",
+    runner: str,
+    dists: "tuple[str, ...]",
+    min_version: str,
+) -> None:
+    """PEP 723 runners are not PythonRun envs (no extras), so min_req skips them."""
+    dist_names = " / ".join(dists)
+    installed = _installed_version(*dists)
+    if installed is None:
+        pytest.skip(f"{dist_names} is not installed")
+    if parse_version(installed) < parse_version(min_version):
+        pytest.skip(f"{runner} requires {dist_names}>={min_version}, found {installed}")
+    project = tox_project(
+        {
+            "tox.ini": f"[tox]\nenvlist = script\n\n[testenv:script]\nrunner = {runner}\nscript = script.py\nmin_req = true\n",
+            "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
+            "script.py": PEP723_SCRIPT,
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+    result.assert_success()
+    # a missing runner does not fail the run, tox marks the env as NOT AVAILABLE
+    assert "script: OK" in result.out, result.out
+
+
+@pytest.mark.parametrize(
+    ("runner", "requirements"),
+    [
+        # the ``constraints`` setting was added in tox 4.28.0
+        ("virtualenv", ((("tox",), "4.28.0"),)),
+        # tox-uv passes ``constraints`` to uv since 1.36.0, uv then ignores
+        # UV_CONSTRAINT, so the plugin extends the setting, which needs
+        # ``overwrite`` from tox 4.58.0
+        (
+            "uv-venv-runner",
+            ((("tox",), "4.58.0"), (("tox-uv-bare", "tox-uv"), "1.36.0")),
+        ),
+    ],
+)
+def test_tox_constraints_config(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    runner: str,
+    requirements: "tuple[tuple[tuple[str, ...], str], ...]",
+) -> None:
+    """Minimum versions are applied together with the tox ``constraints`` setting."""
+    for dists, min_version in requirements:
+        dist_names = " / ".join(dists)
+        installed = _installed_version(*dists)
+        if installed is None:
+            pytest.skip(f"{dist_names} is not installed")
+        if parse_version(installed) < parse_version(min_version):
+            pytest.skip(f"requires {dist_names}>={min_version}, found {installed}")
+    monkeypatch.setenv("MIN_REQ", "1")
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    test_file = TEST_FILE_TEMPLATE.format(cmp="==")
+    test_file += 'import coverage\ndef test_coverage_version():\n    assert coverage.__version__ == "6.5.0"\n'
+    project = tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE.format(
+                env=env, extras="constraints = {toxinidir}/tox_constraints.txt"
+            ),
+            "setup.cfg": SETUP_CFG_TEMPLATE,
+            "setup.py": SETUP_PY_TEMPLATE,
+            "test_file.py": test_file,
+            "tox_constraints.txt": "coverage==6.5.0\n",
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run", "--runner", runner)
     result.assert_success()
