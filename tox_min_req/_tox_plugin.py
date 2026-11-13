@@ -75,8 +75,6 @@ def _add_to_tox_constraints(tox_env: ToxEnv, constrain_file: Path) -> None:
     if not args:
         return
     files = [value for option, value in zip(args[::2], args[1::2]) if option == "-c"]
-    if str(constrain_file) in files:
-        return
     names = [*files, str(constrain_file)]
     # tox splits each entry with ``shlex.split(..., posix=sys.platform != "win32")``.
     # On POSIX quotes are removed, so quoting keeps paths with spaces in one piece.
