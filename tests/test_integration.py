@@ -1,7 +1,7 @@
 import os
 import shutil
 import sys
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING
 
 import pytest
@@ -504,22 +504,38 @@ print(six.__version__)
 """
 
 
-@pytest.mark.skipif(
-    parse_version(version("tox")) < parse_version("4.52.0"),
-    reason="PEP 723 runners were added in tox 4.52.0",
-)
+def _installed_version(*dists: str) -> "str | None":
+    """Return the version of the first installed distribution from ``dists``."""
+    for dist in dists:
+        try:
+            return version(dist)
+        except PackageNotFoundError:
+            continue
+    return None
+
+
 @pytest.mark.parametrize(
-    ("runner", "module"),
-    [("virtualenv-pep-723", "tox"), ("uv-venv-pep-723", "tox_uv")],
+    ("runner", "dists", "min_version"),
+    [
+        ("virtualenv-pep-723", ("tox",), "4.52.0"),
+        # since the split, the tox-uv code ships in tox-uv-bare (same version)
+        ("uv-venv-pep-723", ("tox-uv-bare", "tox-uv"), "1.34.0"),
+    ],
 )
 def test_pep723_runner_ignored(
     tox_project: ToxProjectCreator,
     data_dir: "Path",
     runner: str,
-    module: str,
+    dists: "tuple[str, ...]",
+    min_version: str,
 ) -> None:
     """PEP 723 runners are not PythonRun envs (no extras), so min_req skips them."""
-    pytest.importorskip(module)
+    dist_names = " / ".join(dists)
+    installed = _installed_version(*dists)
+    if installed is None:
+        pytest.skip(f"{dist_names} is not installed")
+    if parse_version(installed) < parse_version(min_version):
+        pytest.skip(f"{runner} requires {dist_names}>={min_version}, found {installed}")
     project = tox_project(
         {
             "tox.ini": f"[tox]\nenvlist = script\n\n[testenv:script]\nrunner = {runner}\nscript = script.py\nmin_req = true\n",
@@ -531,3 +547,5 @@ def test_pep723_runner_ignored(
 
     result = project.run("run")
     result.assert_success()
+    # a missing runner does not fail the run, tox marks the env as NOT AVAILABLE
+    assert "script: OK" in result.out, result.out
