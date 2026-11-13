@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -76,19 +77,28 @@ def _add_to_tox_constraints(tox_env: ToxEnv, constrain_file: Path) -> None:
     files = [value for option, value in zip(args[::2], args[1::2]) if option == "-c"]
     if str(constrain_file) in files:
         return
+    names = [*files, str(constrain_file)]
+    # tox splits each entry with ``shlex.split(..., posix=sys.platform != "win32")``.
+    # On POSIX quotes are removed, so quoting keeps paths with spaces in one piece.
+    # On Windows quotes are kept as part of the file name, so paths cannot be quoted
+    # and paths with spaces cannot be passed.
+    posix = sys.platform != "win32"
     definition = next(
         (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
     )
-    if len(files) * 2 != len(args) or not hasattr(definition, "overwrite"):
+    if (
+        len(files) * 2 != len(args)
         # ``overwrite`` was added in tox 4.58.0
+        or not hasattr(definition, "overwrite")
+        or (not posix and any(" " in name for name in names))
+    ):
         logging.warning(
             "tox-min-req: cannot add %s to the tox 'constraints' setting, "
             "uv may install versions newer than the minimum ones",
             constrain_file,
         )
         return
-    # quote the paths, the constraints parser splits unquoted paths on spaces
-    raw = "\n".join(f'"{name}"' for name in [*files, str(constrain_file)])
+    raw = "\n".join(f'"{name}"' if posix else name for name in names)
     definition.overwrite(  # type: ignore[union-attr]
         type(constraints).factory(tox_env.core["toxinidir"], raw)
     )
