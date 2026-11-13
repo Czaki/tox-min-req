@@ -42,7 +42,7 @@ install_requires =
 
 [options.extras_require]
 test =
-    pytest>=7.1.0
+    pytest>=8.3.0
     coverage
 """
 
@@ -68,12 +68,12 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest>=7.1.0",
+    "pytest>=8.3.0",
 ]
 
 [dependency-groups]
 test = [
-    "pytest>=7.1.0",
+    "pytest>=8.3.0",
 ]
 """
 
@@ -90,7 +90,7 @@ import click
 import sample_package
 
 def test_pytest_version():
-    assert pytest.__version__ {cmp} "7.1.0"
+    assert pytest.__version__ {cmp} "8.3.0"
 
 def test_six_version():
     assert six.__version__ {cmp} "1.13.0"
@@ -386,7 +386,7 @@ import six
 import sample_package
 
 def test_pytest_version():
-    assert pytest.__version__ == "7.1.0"
+    assert pytest.__version__ == "8.3.0"
 
 def test_six_version():
     assert six.__version__ == "{six_version}"
@@ -403,6 +403,9 @@ PYTHON_VER_LI = [
     ("3.10", "310", "1.13.0"),
     ("3.11", "311", "1.14.0"),
     ("3.12", "312", "1.15.0"),
+    ("3.13", "313", "1.16.0"),
+    ("3.14", "314", "1.17.0"),
+    ("3.15", "315", "1.12.0"),
 ]
 
 

@@ -16,13 +16,20 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.platform }} py${{ matrix.python-version }} ${{ matrix.runner }}
+    name: ${{ matrix.platform }} py${{ matrix.python-version }}
     runs-on: ${{ matrix.platform }}
     strategy:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
+        include:
+          # Python 3.8 and 3.9 builds are not available for Ubuntu 26.04 (ubuntu-latest),
+          # see https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json
+          - platform: ubuntu-24.04
+            python-version: '3.8'
+          - platform: ubuntu-24.04
+            python-version: '3.9'
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -68,15 +75,16 @@ jobs:
         with:
           persist-credentials: 'false'
 
-      - name: Set up Python 3.8-3.12
+      - name: Set up Python 3.10-3.15
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: |
-            3.8
-            3.9
             3.10
             3.11
             3.12
+            3.13
+            3.14
+            3.15
 
       - name: Install dependencies
         run: |
