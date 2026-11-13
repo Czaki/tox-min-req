@@ -492,3 +492,42 @@ def test_warning_wrong_extras(
     with pytest.warns(UserWarning, match="Extra test8"):
         result = project.run("run")
     result.assert_success()
+
+
+PEP723_SCRIPT = """\
+# /// script
+# dependencies = ["six>=1.13.0"]
+# ///
+import six
+
+print(six.__version__)
+"""
+
+
+@pytest.mark.skipif(
+    parse_version(version("tox")) < parse_version("4.52.0"),
+    reason="PEP 723 runners were added in tox 4.52.0",
+)
+@pytest.mark.parametrize(
+    ("runner", "module"),
+    [("virtualenv-pep-723", "tox"), ("uv-venv-pep-723", "tox_uv")],
+)
+def test_pep723_runner_ignored(
+    tox_project: ToxProjectCreator,
+    data_dir: "Path",
+    runner: str,
+    module: str,
+) -> None:
+    """PEP 723 runners are not PythonRun envs (no extras), so min_req skips them."""
+    pytest.importorskip(module)
+    project = tox_project(
+        {
+            "tox.ini": f"[tox]\nenvlist = script\n\n[testenv:script]\nrunner = {runner}\nscript = script.py\nmin_req = true\n",
+            "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
+            "script.py": PEP723_SCRIPT,
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+    result.assert_success()

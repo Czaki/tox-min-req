@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from tox.plugin import impl
-from tox.tox_env.runner import RunToxEnv
+from tox.tox_env.python.runner import PythonRun
 
 from ._parse_dependencies import (
     parse_pyproject_toml,
@@ -60,7 +60,8 @@ def _write_constrains_file(
 def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) -> None:
     # Do not check ``section``: tox passes ``PythonRun`` but runners from
     # plugins (e.g. tox-uv's ``UvVenvRunner``) may pass their own class name.
-    if of_type != "deps" or not isinstance(tox_env, RunToxEnv):
+    # Other run envs (e.g. PEP 723 runners) do not register ``extras``.
+    if of_type != "deps" or not isinstance(tox_env, PythonRun):
         return
     if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
         return
