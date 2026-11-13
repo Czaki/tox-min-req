@@ -549,3 +549,53 @@ def test_pep723_runner_ignored(
     result.assert_success()
     # a missing runner does not fail the run, tox marks the env as NOT AVAILABLE
     assert "script: OK" in result.out, result.out
+
+
+@pytest.mark.parametrize(
+    ("runner", "requirements"),
+    [
+        # the ``constraints`` setting was added in tox 4.28.0
+        ("virtualenv", ((("tox",), "4.28.0"),)),
+        # tox-uv passes ``constraints`` to uv since 1.36.0, uv then ignores
+        # UV_CONSTRAINT, so the plugin extends the setting, which needs
+        # ``overwrite`` from tox 4.58.0
+        (
+            "uv-venv-runner",
+            ((("tox",), "4.58.0"), (("tox-uv-bare", "tox-uv"), "1.36.0")),
+        ),
+    ],
+)
+def test_tox_constraints_config(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    runner: str,
+    requirements: "tuple[tuple[tuple[str, ...], str], ...]",
+) -> None:
+    """Minimum versions are applied together with the tox ``constraints`` setting."""
+    for dists, min_version in requirements:
+        dist_names = " / ".join(dists)
+        installed = _installed_version(*dists)
+        if installed is None:
+            pytest.skip(f"{dist_names} is not installed")
+        if parse_version(installed) < parse_version(min_version):
+            pytest.skip(f"requires {dist_names}>={min_version}, found {installed}")
+    monkeypatch.setenv("MIN_REQ", "1")
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    test_file = TEST_FILE_TEMPLATE.format(cmp="==")
+    test_file += 'import coverage\ndef test_coverage_version():\n    assert coverage.__version__ == "6.5.0"\n'
+    project = tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE.format(
+                env=env, extras="constraints = {toxinidir}/tox_constraints.txt"
+            ),
+            "setup.cfg": SETUP_CFG_TEMPLATE,
+            "setup.py": SETUP_PY_TEMPLATE,
+            "test_file.py": test_file,
+            "tox_constraints.txt": "coverage==6.5.0\n",
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run", "--runner", runner)
+    result.assert_success()

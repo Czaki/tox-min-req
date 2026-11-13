@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -53,7 +54,44 @@ def _write_constrains_file(
     else:
         tox_env.environment_variables["UV_CONSTRAINT"] = str(constrain_file)
 
+    _add_to_tox_constraints(tox_env, constrain_file)
+
     return constrain_file
+
+
+def _add_to_tox_constraints(tox_env: ToxEnv, constrain_file: Path) -> None:
+    """
+    Pass the constraints file through the tox ``constraints`` setting too.
+
+    When the ``constraints`` setting (tox>=4.28) is used, tox passes it to the
+    installer as ``-c`` arguments. uv then ignores ``UV_CONSTRAINT``, so the
+    minimum versions have to be passed the same way.
+    """
+    if "constraints" not in tox_env.conf:
+        return
+    constraints = tox_env.conf["constraints"]
+    args = list(constraints.as_root_args)
+    if not args:
+        return
+    files = [value for option, value in zip(args[::2], args[1::2]) if option == "-c"]
+    if str(constrain_file) in files:
+        return
+    definition = next(
+        (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
+    )
+    if len(files) * 2 != len(args) or not hasattr(definition, "overwrite"):
+        # ``overwrite`` was added in tox 4.58.0
+        logging.warning(
+            "tox-min-req: cannot add %s to the tox 'constraints' setting, "
+            "uv may install versions newer than the minimum ones",
+            constrain_file,
+        )
+        return
+    # quote the paths, the constraints parser splits unquoted paths on spaces
+    raw = "\n".join(f'"{name}"' for name in [*files, str(constrain_file)])
+    definition.overwrite(  # type: ignore[union-attr]
+        type(constraints).factory(tox_env.core["toxinidir"], raw)
+    )
 
 
 @impl
