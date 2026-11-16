@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import logging
 import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from tox import __version__ as tox_version
 from tox.plugin import impl
+from tox.tox_env.errors import Fail
 from tox.tox_env.python.runner import PythonRun
 
 from ._parse_dependencies import (
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
 
 
 CONSTRAINTS_FILE_NAME = "min_req_constraints.txt"
+# the same check as tox uses to parse the ``constraints`` setting
+_POSIX = sys.platform != "win32"
 
 
 def _write_constrains_file(
@@ -55,50 +58,54 @@ def _write_constrains_file(
     else:
         tox_env.environment_variables["UV_CONSTRAINT"] = str(constrain_file)
 
-    _add_to_tox_constraints(tox_env, constrain_file)
-
     return constrain_file
 
 
-def _add_to_tox_constraints(tox_env: ToxEnv, constrain_file: Path) -> None:
+def _add_to_tox_constraints(tox_env: ToxEnv, deps: Any, constrain_file: Path) -> None:
     """
-    Pass the constraints file through the tox ``constraints`` setting too.
+    Pass the constraints file to uv as a command line constraint when needed.
 
-    When the ``constraints`` setting (tox>=4.28) is used, tox passes it to the
-    installer as ``-c`` arguments. uv then ignores ``UV_CONSTRAINT``, so the
-    minimum versions have to be passed the same way.
+    uv ignores ``UV_CONSTRAINT`` when a ``-c`` option is passed on the command
+    line. tox does that for ``-c`` lines in ``deps`` and, since tox-uv 1.36.0,
+    for the tox ``constraints`` setting (tox>=4.28). In these cases the file is
+    added to the ``constraints`` setting, which tox passes to uv as ``-c``.
+    pip reads ``PIP_CONSTRAINT`` together with ``-c``, so it needs nothing more.
     """
-    if "constraints" not in tox_env.conf:
+    if type(tox_env.installer).__module__.partition(".")[0] != "tox_uv":
         return
-    constraints = tox_env.conf["constraints"]
-    args = list(constraints.as_root_args)
-    if not args:
+    has_setting = "constraints" in tox_env.conf
+    args = list(tox_env.conf["constraints"].as_root_args) if has_setting else []
+    deps_args = getattr(deps, "as_root_args", [])
+    if not args and not any(
+        arg.startswith(("-c", "--constraint")) for arg in deps_args
+    ):
         return
-    files = [value for option, value in zip(args[::2], args[1::2]) if option == "-c"]
-    names = [*files, str(constrain_file)]
+    definition = next(
+        (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
+    )
+    if not hasattr(definition, "overwrite"):
+        # ``constraints`` was added in tox 4.28.0 and ``overwrite`` in 4.58.0
+        msg = (
+            "tox-min-req: uv ignores UV_CONSTRAINT when constraints are passed "
+            "with -c (from 'deps' or the 'constraints' setting); applying the "
+            f"minimum versions then requires tox>=4.58.0, found {tox_version}"
+        )
+        raise Fail(msg)
     # tox splits each entry with ``shlex.split(..., posix=sys.platform != "win32")``.
     # On POSIX quotes are removed, so quoting keeps paths with spaces in one piece.
     # On Windows quotes are kept as part of the file name, so paths cannot be quoted
     # and paths with spaces cannot be passed.
-    posix = sys.platform != "win32"
-    definition = next(
-        (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
-    )
-    if (
-        len(files) * 2 != len(args)
-        # ``overwrite`` was added in tox 4.58.0
-        or not hasattr(definition, "overwrite")
-        or (not posix and any(" " in name for name in names))
-    ):
-        logging.warning(
-            "tox-min-req: cannot add %s to the tox 'constraints' setting, "
-            "uv may install versions newer than the minimum ones",
-            constrain_file,
+    if not _POSIX and " " in str(constrain_file):
+        msg = (
+            f"tox-min-req: tox cannot pass a constraints file with spaces in its "
+            f"path on Windows ({constrain_file}); use --min-req-constraints-path "
+            "or TOX_MIN_REQ_CONSTRAINTS to write it to a path without spaces"
         )
-        return
-    raw = "\n".join(f'"{name}"' if posix else name for name in names)
+        raise Fail(msg)
+    names = [*args[1::2], str(constrain_file)]
+    raw = "\n".join(f'"{name}"' if _POSIX else name for name in names)
     definition.overwrite(  # type: ignore[union-attr]
-        type(constraints).factory(tox_env.core["toxinidir"], raw)
+        type(tox_env.conf["constraints"]).factory(tox_env.core["toxinidir"], raw)
     )
 
 
@@ -148,7 +155,8 @@ def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) 
                     )
                 )
 
-    _write_constrains_file(tox_env, dependencies, extra_lines)
+    constrain_file = _write_constrains_file(tox_env, dependencies, extra_lines)
+    _add_to_tox_constraints(tox_env, arguments, constrain_file)
 
 
 @impl
