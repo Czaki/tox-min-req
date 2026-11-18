@@ -66,9 +66,12 @@ def _add_to_tox_constraints(tox_env: ToxEnv, deps: Any, constrain_file: Path) ->
     Pass the constraints file to uv as a command line constraint when needed.
 
     uv ignores ``UV_CONSTRAINT`` when a ``-c`` option is passed on the command
-    line. tox does that for ``-c`` lines in ``deps`` and, since tox-uv 1.36.0,
-    for the tox ``constraints`` setting (tox>=4.28). In these cases the file is
-    added to the ``constraints`` setting, which tox passes to uv as ``-c``.
+    line. tox does that for ``-c`` lines in ``deps``, for the generated
+    constraints of ``constrain_package_deps`` (when the package dependencies are
+    installed) and, since tox-uv 1.36.0, for the tox ``constraints`` setting
+    (tox>=4.28). In these cases the file is added to the ``constraints``
+    setting, which tox passes to uv as ``-c``. With a nonempty ``constraints``
+    setting tox also stops adding the ``constrain_package_deps`` constraints.
     pip reads ``PIP_CONSTRAINT`` together with ``-c``, so it needs nothing more.
     """
     if type(tox_env.installer).__module__.partition(".")[0] != "tox_uv":
@@ -76,9 +79,12 @@ def _add_to_tox_constraints(tox_env: ToxEnv, deps: Any, constrain_file: Path) ->
     has_setting = "constraints" in tox_env.conf
     args = list(tox_env.conf["constraints"].as_root_args) if has_setting else []
     deps_args = getattr(deps, "as_root_args", [])
-    if not args and not any(
-        arg.startswith(("-c", "--constraint")) for arg in deps_args
-    ):
+    deps_constraints = any(arg.startswith(("-c", "--constraint")) for arg in deps_args)
+    package_constraints = (
+        "constrain_package_deps" in tox_env.conf
+        and tox_env.conf["constrain_package_deps"]
+    )
+    if not args and not deps_constraints and not package_constraints:
         return
     definition = next(
         (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
@@ -87,7 +93,8 @@ def _add_to_tox_constraints(tox_env: ToxEnv, deps: Any, constrain_file: Path) ->
         # ``constraints`` was added in tox 4.28.0 and ``overwrite`` in 4.58.0
         msg = (
             "tox-min-req: uv ignores UV_CONSTRAINT when constraints are passed "
-            "with -c (from 'deps' or the 'constraints' setting); applying the "
+            "with -c (from 'deps', 'constrain_package_deps' or the 'constraints' "
+            "setting); applying the "
             f"minimum versions then requires tox>=4.58.0, found {tox_version}"
         )
         raise Fail(msg)

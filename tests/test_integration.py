@@ -624,13 +624,19 @@ DEPS_CONSTRAINTS_TEST_FILE = (
 )
 
 
-def _deps_constraints_project(tox_project: ToxProjectCreator, data_dir: "Path"):  # type: ignore[no-untyped-def]
+def _deps_constraints_project(  # type: ignore[no-untyped-def]
+    tox_project: ToxProjectCreator,
+    data_dir: "Path",
+    options: str = "",
+    deps_constraint: bool = True,
+):
     env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    extras = DEPS_CONSTRAINTS_TOX_EXTRAS + options
+    if not deps_constraint:
+        extras = extras.replace("    -c {toxinidir}/deps_constraints.txt\n", "")
     return tox_project(
         {
-            "tox.ini": TOX_INI_TEMPLATE.format(
-                env=env, extras=DEPS_CONSTRAINTS_TOX_EXTRAS
-            ),
+            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=extras),
             "setup.cfg": SETUP_CFG_TEMPLATE,
             "setup.py": SETUP_PY_TEMPLATE,
             "test_file.py": DEPS_CONSTRAINTS_TEST_FILE,
@@ -640,6 +646,21 @@ def _deps_constraints_project(tox_project: ToxProjectCreator, data_dir: "Path"):
     )
 
 
+@pytest.mark.parametrize(
+    "deps_constraint",
+    [pytest.param(True, id="deps_c"), pytest.param(False, id="no_deps_c")],
+)
+@pytest.mark.parametrize(
+    "options",
+    [
+        pytest.param("", id="default"),
+        pytest.param("constrain_package_deps = true\n", id="constrain_package_deps"),
+        pytest.param(
+            "constrain_package_deps = true\nuse_frozen_constraints = true\n",
+            id="use_frozen_constraints",
+        ),
+    ],
+)
 @pytest.mark.parametrize(
     ("runner", "requirements"),
     [
@@ -655,16 +676,25 @@ def test_deps_constraints(
     data_dir: "Path",
     runner: str,
     requirements: "tuple[tuple[tuple[str, ...], str], ...]",
+    options: str,
+    deps_constraint: bool,
 ) -> None:
     """
-    Minimum versions are applied when ``deps`` contain a ``-c`` line.
+    Minimum versions are applied with ``-c`` in ``deps`` and package constraints.
 
     ``attrs`` is only in ``deps``, so only the constraints passed to the ``deps``
-    install can pin it.
+    install can pin it. The test file also checks the package dependencies.
+
+    tox passes ``-c`` lines from ``deps`` and the ``constrain_package_deps``
+    constraints to uv as ``-c``, so uv ignores UV_CONSTRAINT. For uv the plugin
+    then sets the tox ``constraints`` setting. tox then skips its
+    ``constrain_package_deps`` / ``use_frozen_constraints`` handling and passes
+    the ``constraints`` setting to the package dependencies install instead, so
+    these options must still end with the minimum versions.
     """
     _require(requirements)
     monkeypatch.setenv("MIN_REQ", "1")
-    project = _deps_constraints_project(tox_project, data_dir)
+    project = _deps_constraints_project(tox_project, data_dir, options, deps_constraint)
 
     result = project.run("run", "--runner", runner)
 
