@@ -109,6 +109,19 @@ def _clean_pip_constrains_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PIP_CONSTRAINT", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _clean_outer_tox_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Remove the variables set by the tox run that runs this test suite.
+
+    tox reads ``TOX_WORK_DIR`` as the ``--workdir`` option, so without this the
+    tox runs inside the tests would build their packages in the outer ``.tox``
+    directory and replace the outer package, failing the next outer env.
+    """
+    for name in ("TOX_WORK_DIR", "TOX_ENV_DIR", "TOX_ENV_NAME", "TOX_PACKAGE"):
+        monkeypatch.delenv(name, raising=False)
+
+
 @pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
 def test_setup_cfg_parse(
     tox_project: ToxProjectCreator,
