@@ -1,11 +1,12 @@
 import os
 import shutil
 import sys
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 from typing import TYPE_CHECKING
 
 import pytest
 from packaging.version import parse as parse_version
+from tox.config import of_type
 from tox.pytest import ToxProjectCreator, init_fixture  # noqa: F401
 
 from tox_min_req._tox_plugin import CONSTRAINTS_FILE_NAME
@@ -42,7 +43,7 @@ install_requires =
 
 [options.extras_require]
 test =
-    pytest>=7.1.0
+    pytest>=8.3.0
     coverage
 """
 
@@ -68,12 +69,12 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "pytest>=7.1.0",
+    "pytest>=8.3.0",
 ]
 
 [dependency-groups]
 test = [
-    "pytest>=7.1.0",
+    "pytest>=8.3.0",
 ]
 """
 
@@ -90,7 +91,7 @@ import click
 import sample_package
 
 def test_pytest_version():
-    assert pytest.__version__ {cmp} "7.1.0"
+    assert pytest.__version__ {cmp} "8.3.0"
 
 def test_six_version():
     assert six.__version__ {cmp} "1.13.0"
@@ -106,6 +107,19 @@ def test_sample_package():
 @pytest.fixture(autouse=True)
 def _clean_pip_constrains_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("PIP_CONSTRAINT", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _clean_outer_tox_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """
+    Remove the variables set by the tox run that runs this test suite.
+
+    tox reads ``TOX_WORK_DIR`` as the ``--workdir`` option, so without this the
+    tox runs inside the tests would build their packages in the outer ``.tox``
+    directory and replace the outer package, failing the next outer env.
+    """
+    for name in ("TOX_WORK_DIR", "TOX_ENV_DIR", "TOX_ENV_NAME", "TOX_PACKAGE"):
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.mark.parametrize(("cmp", "req"), [("==", "1"), ("!=", "0")])
@@ -386,7 +400,7 @@ import six
 import sample_package
 
 def test_pytest_version():
-    assert pytest.__version__ == "7.1.0"
+    assert pytest.__version__ == "8.3.0"
 
 def test_six_version():
     assert six.__version__ == "{six_version}"
@@ -397,12 +411,14 @@ def test_sample_package():
 
 
 PYTHON_VER_LI = [
-    ("3.7", "37", "1.10.0"),
     ("3.8", "38", "1.11.0"),
     ("3.9", "39", "1.12.0"),
     ("3.10", "310", "1.13.0"),
     ("3.11", "311", "1.14.0"),
     ("3.12", "312", "1.15.0"),
+    ("3.13", "313", "1.16.0"),
+    ("3.14", "314", "1.17.0"),
+    ("3.15", "315", "1.12.0"),
 ]
 
 
@@ -490,3 +506,254 @@ def test_warning_wrong_extras(
     with pytest.warns(UserWarning, match="Extra test8"):
         result = project.run("run")
     result.assert_success()
+
+
+PEP723_SCRIPT = """\
+# /// script
+# dependencies = ["six>=1.13.0"]
+# ///
+import six
+
+print(six.__version__)
+"""
+
+
+def _installed_version(*dists: str) -> "str | None":
+    """Return the version of the first installed distribution from ``dists``."""
+    for dist in dists:
+        try:
+            return version(dist)
+        except PackageNotFoundError:
+            continue
+    return None
+
+
+UV_DISTS = ("tox-uv-bare", "tox-uv")
+
+
+def _require(requirements: "tuple[tuple[tuple[str, ...], str], ...]") -> None:
+    """Skip the test unless each ``(dists, min_version)`` requirement is installed."""
+    for dists, min_version in requirements:
+        dist_names = " / ".join(dists)
+        installed = _installed_version(*dists)
+        if installed is None:
+            pytest.skip(f"{dist_names} is not installed")
+        if parse_version(installed) < parse_version(min_version):
+            pytest.skip(f"requires {dist_names}>={min_version}, found {installed}")
+
+
+@pytest.mark.parametrize(
+    ("runner", "dists", "min_version"),
+    [
+        ("virtualenv-pep-723", ("tox",), "4.52.0"),
+        # since the split, the tox-uv code ships in tox-uv-bare (same version)
+        ("uv-venv-pep-723", ("tox-uv-bare", "tox-uv"), "1.34.0"),
+    ],
+)
+def test_pep723_runner_ignored(
+    tox_project: ToxProjectCreator,
+    data_dir: "Path",
+    runner: str,
+    dists: "tuple[str, ...]",
+    min_version: str,
+) -> None:
+    """PEP 723 runners are not PythonRun envs (no extras), so min_req skips them."""
+    dist_names = " / ".join(dists)
+    installed = _installed_version(*dists)
+    if installed is None:
+        pytest.skip(f"{dist_names} is not installed")
+    if parse_version(installed) < parse_version(min_version):
+        pytest.skip(f"{runner} requires {dist_names}>={min_version}, found {installed}")
+    project = tox_project(
+        {
+            "tox.ini": f"[tox]\nenvlist = script\n\n[testenv:script]\nrunner = {runner}\nscript = script.py\nmin_req = true\n",
+            "pyproject.toml": PYPROJECT_TOML_TEMPLATE,
+            "script.py": PEP723_SCRIPT,
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run")
+    result.assert_success()
+    # a missing runner does not fail the run, tox marks the env as NOT AVAILABLE
+    assert "script: OK" in result.out, result.out
+
+
+@pytest.mark.parametrize(
+    ("runner", "requirements"),
+    [
+        # the ``constraints`` setting was added in tox 4.28.0
+        ("virtualenv", ((("tox",), "4.28.0"),)),
+        # tox-uv passes ``constraints`` to uv since 1.36.0, uv then ignores
+        # UV_CONSTRAINT, so the plugin extends the setting, which needs
+        # ``overwrite`` from tox 4.58.0
+        (
+            "uv-venv-runner",
+            ((("tox",), "4.58.0"), (UV_DISTS, "1.36.0")),
+        ),
+    ],
+)
+def test_tox_constraints_config(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    runner: str,
+    requirements: "tuple[tuple[tuple[str, ...], str], ...]",
+) -> None:
+    """Minimum versions are applied together with the tox ``constraints`` setting."""
+    _require(requirements)
+    monkeypatch.setenv("MIN_REQ", "1")
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    test_file = TEST_FILE_TEMPLATE.format(cmp="==")
+    test_file += 'import coverage\ndef test_coverage_version():\n    assert coverage.__version__ == "6.5.0"\n'
+    project = tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE.format(
+                env=env, extras="constraints = {toxinidir}/tox_constraints.txt"
+            ),
+            "setup.cfg": SETUP_CFG_TEMPLATE,
+            "setup.py": SETUP_PY_TEMPLATE,
+            "test_file.py": test_file,
+            "tox_constraints.txt": "coverage==6.5.0\n",
+        },
+        base=data_dir / "package_data",
+    )
+
+    result = project.run("run", "--runner", runner)
+    result.assert_success()
+
+
+DEPS_CONSTRAINTS_TOX_EXTRAS = """deps =
+    -c {toxinidir}/deps_constraints.txt
+    attrs
+min_req_constraints = attrs==22.1.0
+"""
+
+DEPS_CONSTRAINTS_TEST_FILE = (
+    TEST_FILE_TEMPLATE.format(cmp="==")
+    + "import attr\n"
+    + "def test_attrs_version():\n"
+    + '    assert attr.__version__ == "22.1.0"\n'
+)
+
+
+def _deps_constraints_project(  # type: ignore[no-untyped-def]
+    tox_project: ToxProjectCreator,
+    data_dir: "Path",
+    options: str = "",
+    deps_constraint: bool = True,
+):
+    env = f"{sys.version_info[0]}{sys.version_info[1]}"
+    extras = DEPS_CONSTRAINTS_TOX_EXTRAS + options
+    if not deps_constraint:
+        extras = extras.replace("    -c {toxinidir}/deps_constraints.txt\n", "")
+    return tox_project(
+        {
+            "tox.ini": TOX_INI_TEMPLATE.format(env=env, extras=extras),
+            "setup.cfg": SETUP_CFG_TEMPLATE,
+            "setup.py": SETUP_PY_TEMPLATE,
+            "test_file.py": DEPS_CONSTRAINTS_TEST_FILE,
+            "deps_constraints.txt": "babel==2.6.0\n",
+        },
+        base=data_dir / "package_data",
+    )
+
+
+@pytest.mark.parametrize(
+    "deps_constraint",
+    [pytest.param(True, id="deps_c"), pytest.param(False, id="no_deps_c")],
+)
+@pytest.mark.parametrize(
+    "options",
+    [
+        pytest.param("", id="default"),
+        pytest.param("constrain_package_deps = true\n", id="constrain_package_deps"),
+        pytest.param(
+            "constrain_package_deps = true\nuse_frozen_constraints = true\n",
+            id="use_frozen_constraints",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    ("runner", "requirements"),
+    [
+        ("virtualenv", ()),
+        # with ``-c`` in ``deps`` uv ignores UV_CONSTRAINT, so the plugin
+        # extends the ``constraints`` setting, which needs tox 4.58.0
+        ("uv-venv-runner", ((("tox",), "4.58.0"), (UV_DISTS, "0"))),
+    ],
+)
+def test_deps_constraints(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    runner: str,
+    requirements: "tuple[tuple[tuple[str, ...], str], ...]",
+    options: str,
+    deps_constraint: bool,
+) -> None:
+    """
+    Minimum versions are applied with ``-c`` in ``deps`` and package constraints.
+
+    ``attrs`` is only in ``deps``, so only the constraints passed to the ``deps``
+    install can pin it. The test file also checks the package dependencies.
+
+    tox passes ``-c`` lines from ``deps`` and the ``constrain_package_deps``
+    constraints to uv as ``-c``, so uv ignores UV_CONSTRAINT. For uv the plugin
+    then sets the tox ``constraints`` setting. tox then skips its
+    ``constrain_package_deps`` / ``use_frozen_constraints`` handling and passes
+    the ``constraints`` setting to the package dependencies install instead, so
+    these options must still end with the minimum versions.
+    """
+    _require(requirements)
+    monkeypatch.setenv("MIN_REQ", "1")
+    project = _deps_constraints_project(tox_project, data_dir, options, deps_constraint)
+
+    result = project.run("run", "--runner", runner)
+
+    result.assert_success()
+
+
+def test_uv_constraints_old_tox(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+) -> None:
+    """Fail when the constraints cannot be passed to uv (tox<4.58.0)."""
+    _require(((UV_DISTS, "0"),))
+
+    # simulate tox<4.58.0, which has no ``overwrite``
+    monkeypatch.delattr(of_type.ConfigDynamicDefinition, "overwrite", raising=False)
+    monkeypatch.delattr(of_type.ConfigDefinition, "overwrite", raising=False)
+    monkeypatch.setenv("MIN_REQ", "1")
+    project = _deps_constraints_project(tox_project, data_dir)
+
+    result = project.run("run", "--runner", "uv-venv-runner")
+
+    result.assert_failed()
+    assert "applying the minimum versions then requires tox>=4.58.0" in result.out
+
+
+def test_uv_constraints_windows_path_with_spaces(
+    tox_project: ToxProjectCreator,
+    monkeypatch: pytest.MonkeyPatch,
+    data_dir: "Path",
+    tmp_path: "Path",
+) -> None:
+    """Fail when the constraints file path has spaces on Windows."""
+    _require(((("tox",), "4.58.0"), (UV_DISTS, "0")))
+    monkeypatch.setattr("tox_min_req._tox_plugin._POSIX", False)
+    monkeypatch.setenv("MIN_REQ", "1")
+    constraints_dir = tmp_path / "dir with space"
+    constraints_dir.mkdir()
+    project = _deps_constraints_project(tox_project, data_dir)
+
+    result = project.run(
+        "run",
+        "--runner",
+        "uv-venv-runner",
+        f"--min-req-constraints-path={constraints_dir}",
+    )
+
+    result.assert_failed()
+    assert "cannot pass a constraints file with spaces" in result.out

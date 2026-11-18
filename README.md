@@ -35,6 +35,12 @@ some of the min-req dependencies could be upgraded or downgraded when installing
 The `PIP_CONSTRAINT` and `UV_CONSTRAINT` variables are used to pin the dependencies; it will apply to the call of `pip install`
 during dependency resolving. 
 
+uv ignores the `UV_CONSTRAINT` variable when constraints are also passed with `-c`, which tox does for `-c` lines in `deps`,
+for `constrain_package_deps = true` and for the `constraints` setting. With the `uv-venv-runner` (tox-uv) the plugin then adds
+the generated file to the `constraints` setting. tox then no longer applies the `constrain_package_deps` constraints,
+so the package dependencies are pinned by the generated file only. This requires tox 4.58.0 or newer; with an older tox such an environment fails
+instead of silently installing newer versions.
+
 
 ## Installation
 
@@ -52,7 +58,7 @@ pip install tox-min-req
 The basic usage is to set the `MIN_REQ` environment variable to `1`
 
 ```bash
-$ MIN_REQ=1 tox -e py37
+$ MIN_REQ=1 tox -e py310
 ```
 
 ## Configuration options
@@ -99,11 +105,15 @@ In such a scenatio, one needs to set the `TOX_MIN_REQ_CONSTRAINTS` environment v
 to the path where constraints file can be written.
 
 ```bash
-$ TOX_MIN_REQ_CONSTRAINTS=/tmp MIN_REQ=1 tox -e py37
+$ TOX_MIN_REQ_CONSTRAINTS=/tmp MIN_REQ=1 tox -e py310
 ```
 
 It is also possible to use the `--min-req-constraints-path` command line option to set the path to the constraints file.
 
 ```bash
-$ tox --min-req-constraints-path=/tmp -e py37
-``` 
+$ tox --min-req-constraints-path=/tmp -e py310
+```
+
+On Windows, tox cannot pass a path with spaces through the `constraints` setting either,
+so the `uv-venv-runner` environments described above fail if the constraints file path contains spaces.
+ 

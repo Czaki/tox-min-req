@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from tox import __version__ as tox_version
 from tox.plugin import impl
+from tox.tox_env.errors import Fail
+from tox.tox_env.python.runner import PythonRun
 
 from ._parse_dependencies import (
     parse_pyproject_toml,
@@ -19,6 +23,8 @@ if TYPE_CHECKING:
 
 
 CONSTRAINTS_FILE_NAME = "min_req_constraints.txt"
+# the same check as tox uses to parse the ``constraints`` setting
+_POSIX = sys.platform != "win32"
 
 
 def _write_constrains_file(
@@ -55,9 +61,67 @@ def _write_constrains_file(
     return constrain_file
 
 
+def _add_to_tox_constraints(tox_env: ToxEnv, deps: Any, constrain_file: Path) -> None:
+    """
+    Pass the constraints file to uv as a command line constraint when needed.
+
+    uv ignores ``UV_CONSTRAINT`` when a ``-c`` option is passed on the command
+    line. tox does that for ``-c`` lines in ``deps``, for the generated
+    constraints of ``constrain_package_deps`` (when the package dependencies are
+    installed) and, since tox-uv 1.36.0, for the tox ``constraints`` setting
+    (tox>=4.28). In these cases the file is added to the ``constraints``
+    setting, which tox passes to uv as ``-c``. With a nonempty ``constraints``
+    setting tox also stops adding the ``constrain_package_deps`` constraints.
+    pip reads ``PIP_CONSTRAINT`` together with ``-c``, so it needs nothing more.
+    """
+    if type(tox_env.installer).__module__.partition(".")[0] != "tox_uv":
+        return
+    has_setting = "constraints" in tox_env.conf
+    args = list(tox_env.conf["constraints"].as_root_args) if has_setting else []
+    deps_args = getattr(deps, "as_root_args", [])
+    deps_constraints = any(arg.startswith(("-c", "--constraint")) for arg in deps_args)
+    package_constraints = (
+        "constrain_package_deps" in tox_env.conf
+        and tox_env.conf["constrain_package_deps"]
+    )
+    if not args and not deps_constraints and not package_constraints:
+        return
+    definition = next(
+        (d for d in tox_env.conf.get_configs() if "constraints" in d.keys), None
+    )
+    if not hasattr(definition, "overwrite"):
+        # ``constraints`` was added in tox 4.28.0 and ``overwrite`` in 4.58.0
+        msg = (
+            "tox-min-req: uv ignores UV_CONSTRAINT when constraints are passed "
+            "with -c (from 'deps', 'constrain_package_deps' or the 'constraints' "
+            "setting); applying the "
+            f"minimum versions then requires tox>=4.58.0, found {tox_version}"
+        )
+        raise Fail(msg)
+    # tox splits each entry with ``shlex.split(..., posix=sys.platform != "win32")``.
+    # On POSIX quotes are removed, so quoting keeps paths with spaces in one piece.
+    # On Windows quotes are kept as part of the file name, so paths cannot be quoted
+    # and paths with spaces cannot be passed.
+    if not _POSIX and " " in str(constrain_file):
+        msg = (
+            f"tox-min-req: tox cannot pass a constraints file with spaces in its "
+            f"path on Windows ({constrain_file}); use --min-req-constraints-path "
+            "or TOX_MIN_REQ_CONSTRAINTS to write it to a path without spaces"
+        )
+        raise Fail(msg)
+    names = [*args[1::2], str(constrain_file)]
+    raw = "\n".join(f'"{name}"' if _POSIX else name for name in names)
+    definition.overwrite(  # type: ignore[union-attr]
+        type(tox_env.conf["constraints"]).factory(tox_env.core["toxinidir"], raw)
+    )
+
+
 @impl
 def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) -> None:
-    if of_type != "deps" or section != "PythonRun":
+    # Do not check ``section``: tox passes ``PythonRun`` but runners from
+    # plugins (e.g. tox-uv's ``UvVenvRunner``) may pass their own class name.
+    # Other run envs (e.g. PEP 723 runners) do not register ``extras``.
+    if of_type != "deps" or not isinstance(tox_env, PythonRun):
         return
     if os.environ.get("MIN_REQ", "0") != "1" and not tox_env.conf["min_req"]:
         return
@@ -98,7 +162,8 @@ def tox_on_install(tox_env: ToxEnv, arguments: Any, section: str, of_type: str) 
                     )
                 )
 
-    _write_constrains_file(tox_env, dependencies, extra_lines)
+    constrain_file = _write_constrains_file(tox_env, dependencies, extra_lines)
+    _add_to_tox_constraints(tox_env, arguments, constrain_file)
 
 
 @impl
